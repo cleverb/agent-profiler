@@ -1,0 +1,26 @@
+{
+  "name": "agent-profiler",
+  "version": "0.1.0",
+  "description": "Local-first profiling for AI coding agents.",
+  "type": "module",
+  "bin": {
+    "agent-profiler": "./dist/cli.js"
+  },
+  "scripts": {
+    "dev": "tsx src/cli.ts",
+    "build": "tsc && node --input-type=module -e \"import fs from 'node:fs'; fs.copyFileSync('src/core/schema.sql','dist/core/schema.sql'); try { fs.chmodSync('dist/cli.js', 0o755); } catch { /* non-Unix or read-only */ }\"",
+    "start": "node dist/cli.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^12.9.0",
+    "commander": "^12.0.0"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
+  }
+}

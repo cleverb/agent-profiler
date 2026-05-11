@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.DS_Store
+
+# Local profiler store and SQLite sidecars
+.agent-profiler/
+*.sqlite-shm
+*.sqlite-wal
+
+# Machine-specific Cursor hook wiring (paths from `init cursor`)
+.cursor/hooks.json
