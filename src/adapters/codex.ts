@@ -1,5 +1,8 @@
 import { estimateTokens } from "../core/tokens.js";
-import type { AgentEventRole, NormalizedAgentEvent } from "../core/normalize.js";
+import type {
+  AgentEventRole,
+  NormalizedAgentEvent,
+} from "../core/normalize.js";
 
 function pickFirstString(values: unknown[]): string | undefined {
   for (const value of values) {
@@ -27,7 +30,10 @@ function stringifyToolPayload(value: unknown): string {
   }
 }
 
-function estimateTokensForRole(role: AgentEventRole, text: string): {
+function estimateTokensForRole(
+  role: AgentEventRole,
+  text: string,
+): {
   estimatedInputTokens: number;
   estimatedOutputTokens: number;
 } {

@@ -1,9 +1,9 @@
 ---
-status: '{proposed | accepted | rejected | deprecated | superseded by [title](YYYY-MM-DD-title.md)}'
+status: "{proposed | accepted | rejected | deprecated | superseded by [title](YYYY-MM-DD-title.md)}"
 date: { YYYY-MM-DD }
-decision-makers: '{list everyone who owns the decision}'
-consulted: '{list everyone whose expertise was sought — two-way communication}'
-informed: '{list everyone kept up-to-date — one-way communication}'
+decision-makers: "{list everyone who owns the decision}"
+consulted: "{list everyone whose expertise was sought — two-way communication}"
+informed: "{list everyone kept up-to-date — one-way communication}"
 ---
 
 # {short title, representative of solved problem and found solution}

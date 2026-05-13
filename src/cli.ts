@@ -5,6 +5,7 @@ import {
   runAuditContext,
 } from "./commands/auditContext.js";
 import { runHook } from "./commands/hook.js";
+import { runDashboard } from "./commands/dashboard.js";
 import { runInit, type InitSource } from "./commands/init.js";
 import { getLastReport, runLast } from "./commands/last.js";
 import { getStatusReport, runStatus } from "./commands/status.js";
@@ -90,6 +91,30 @@ program
       return;
     }
     runStatus(options.mode);
+  });
+
+program
+  .command("dashboard")
+  .description(
+    "Serve a local dashboard (SQLite + context audit). Copies UI into .agent-profiler/dashboard/.",
+  )
+  .option("--host <host>", "Bind address", "127.0.0.1")
+  .option("--port <port>", "HTTP port", "3737")
+  .action((opts: { host?: string; port?: string }) => {
+    const port = parseInt(opts.port ?? "3737", 10);
+    if (!Number.isFinite(port) || port < 1 || port > 65535) {
+      console.error(`Invalid port: ${opts.port}`);
+      process.exitCode = 1;
+      return;
+    }
+    const host = opts.host ?? "127.0.0.1";
+    try {
+      runDashboard({ host, port });
+    } catch (error) {
+      console.error("Failed to start dashboard.");
+      console.error(error);
+      process.exitCode = 1;
+    }
   });
 
 program

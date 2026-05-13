@@ -1,5 +1,8 @@
 import { estimateTokens } from "../core/tokens.js";
-import type { AgentEventRole, NormalizedAgentEvent } from "../core/normalize.js";
+import type {
+  AgentEventRole,
+  NormalizedAgentEvent,
+} from "../core/normalize.js";
 
 const cursorRoleMap: Record<string, AgentEventRole> = {
   beforeSubmitPrompt: "user_prompt",
@@ -69,7 +72,11 @@ function extractObservableText(payload: Record<string, unknown>): string {
   if (toolResponse) return toolResponse;
 
   const toolInput = stringifyJsonish(
-    payload.tool_input ?? payload.toolInput ?? payload.input ?? payload.args ?? payload.arguments,
+    payload.tool_input ??
+      payload.toolInput ??
+      payload.input ??
+      payload.args ??
+      payload.arguments,
   );
   if (toolInput) return toolInput;
 

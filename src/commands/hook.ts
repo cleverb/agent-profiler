@@ -77,7 +77,10 @@ function writeCodexHookAck(source: InitSource, eventName: string): void {
   process.stdout.write(`${JSON.stringify({ continue: true })}\n`);
 }
 
-export async function runHook(source: InitSource, eventName: string): Promise<void> {
+export async function runHook(
+  source: InitSource,
+  eventName: string,
+): Promise<void> {
   const stdinText = await readStdin();
   const rawPayload = parseRawPayload(stdinText);
   const normalized = normalizeEvent(source, eventName, rawPayload);
@@ -85,7 +88,10 @@ export async function runHook(source: InitSource, eventName: string): Promise<vo
 
   const db = openDb(getDefaultDbPath());
   try {
-    const workspacePath = resolveHookWorkspacePath(normalized.repoPath, rawPayload);
+    const workspacePath = resolveHookWorkspacePath(
+      normalized.repoPath,
+      rawPayload,
+    );
     const workspaceGit = resolveWorkspaceGitMeta(workspacePath);
     const derived = deriveIngestFields(
       source as TelemetryHookSource,
@@ -94,7 +100,13 @@ export async function runHook(source: InitSource, eventName: string): Promise<vo
       stdinText,
       normalized,
     );
-    const eventId = insertEvent(db, normalized, payloadHash, workspaceGit, derived);
+    const eventId = insertEvent(
+      db,
+      normalized,
+      payloadHash,
+      workspaceGit,
+      derived,
+    );
     mergeInteractionSpan(db, eventId, normalized, workspaceGit, derived);
   } finally {
     db.close();

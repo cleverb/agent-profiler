@@ -27,11 +27,12 @@
   "files": [
     "dist/**/*",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "assets/dashboard.png"
   ],
   "scripts": {
     "dev": "tsx src/cli.ts",
-    "build": "tsc && node --input-type=module -e \"import fs from 'node:fs'; fs.copyFileSync('src/core/schema.sql','dist/core/schema.sql'); try { fs.chmodSync('dist/cli.js', 0o755); } catch { /* non-Unix or read-only */ }\"",
+    "build": "tsc && node scripts/copy-build-assets.mjs",
     "start": "node dist/cli.js",
     "typecheck": "tsc --noEmit",
     "format": "prettier --check . --ignore-unknown --ignore-path .gitignore",
@@ -39,6 +40,7 @@
     "lint": "npm run typecheck",
     "lint-staged": "lint-staged",
     "smoke:cli": "node scripts/smoke-cli.js",
+    "smoke:dashboard": "node scripts/smoke-dashboard.mjs",
     "pack:dry-run": "npm run build && npm pack --dry-run --ignore-scripts",
     "prepare": "husky",
     "prepublishOnly": "npm run build && node scripts/prepublish-checks.js",

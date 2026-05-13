@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Agent Profiler Dashboard</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="layout">
+      <header class="header">
+        <div>
+          <h1>Agent Profiler Dashboard</h1>
+          <p class="muted" id="meta-line"></p>
+        </div>
+        <div class="header-actions">
+          <label class="session-label">
+            Session
+            <select id="session-select" aria-label="Session"></select>
+          </label>
+          <button type="button" id="refresh-btn">Refresh</button>
+        </div>
+      </header>
+
+      <main class="grid">
+        <section class="card span-2">
+          <h2>Observable usage</h2>
+          <div class="gauge-row">
+            <div class="gauge">
+              <span class="gauge-value" id="total-tokens">—</span>
+              <span class="muted small">estimated total tokens</span>
+            </div>
+            <div class="bars" id="usage-bars"></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Efficiency</h2>
+          <div class="score-block">
+            <span class="score" id="efficiency-score">—</span>
+            <span class="muted small">/ 100</span>
+          </div>
+          <div class="sparkline-wrap">
+            <svg
+              id="score-sparkline"
+              viewBox="0 0 200 48"
+              aria-hidden="true"
+            ></svg>
+          </div>
+        </section>
+
+        <section class="card span-3">
+          <h2>Session timeline</h2>
+          <div class="timeline-meta muted small" id="timeline-meta"></div>
+          <div class="timeline-track" id="timeline-track"></div>
+          <div class="timeline-legend">
+            <span><i class="dot user"></i> user</span>
+            <span><i class="dot assistant"></i> assistant</span>
+            <span><i class="dot tool"></i> tool</span>
+            <span><i class="dot shell"></i> shell</span>
+            <span><i class="dot other"></i> other</span>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Tool result sizes</h2>
+          <div class="bars vertical" id="tool-histogram"></div>
+        </section>
+
+        <section class="card span-2">
+          <h2>Context audit</h2>
+          <p class="muted small">Estimated tokens for always-on repo files</p>
+          <div class="bars vertical tall" id="context-bars"></div>
+        </section>
+
+        <section class="card">
+          <h2>Red flags</h2>
+          <ul class="flag-list" id="red-flags"></ul>
+        </section>
+
+        <section class="card span-2">
+          <h2>Recommendations</h2>
+          <ol class="rec-list" id="recommendations"></ol>
+        </section>
+      </main>
+    </div>
+    <script src="./app.js" defer></script>
+  </body>
+</html>

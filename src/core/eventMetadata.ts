@@ -47,7 +47,10 @@ export function parseMcpToolName(canonical: string): {
   if (t.startsWith("mcp__")) {
     const parts = t.split("__").filter(Boolean);
     if (parts.length >= 3) {
-      return { mcpServer: parts[1] ?? null, mcpTool: parts.slice(2).join("__") || null };
+      return {
+        mcpServer: parts[1] ?? null,
+        mcpTool: parts.slice(2).join("__") || null,
+      };
     }
   }
 
@@ -75,7 +78,10 @@ function hookToInteractionKind(
   source: TelemetryHookSource,
   hookEventName: string,
 ): { kind: string; toolPhase: ToolSpanPhase | null } {
-  const cursorMap: Record<string, { kind: string; toolPhase: ToolSpanPhase | null }> = {
+  const cursorMap: Record<
+    string,
+    { kind: string; toolPhase: ToolSpanPhase | null }
+  > = {
     beforeSubmitPrompt: { kind: "user_prompt_submit", toolPhase: null },
     afterAgentResponse: { kind: "model_output", toolPhase: null },
     afterAgentThought: { kind: "model_thought", toolPhase: null },
@@ -95,7 +101,10 @@ function hookToInteractionKind(
     preCompact: { kind: "context_compact", toolPhase: null },
   };
 
-  const codexMap: Record<string, { kind: string; toolPhase: ToolSpanPhase | null }> = {
+  const codexMap: Record<
+    string,
+    { kind: string; toolPhase: ToolSpanPhase | null }
+  > = {
     SessionStart: { kind: "session_start", toolPhase: null },
     UserPromptSubmit: { kind: "user_prompt_submit", toolPhase: null },
     PreToolUse: { kind: "tool_request", toolPhase: "pre" },
@@ -123,7 +132,9 @@ function extractCorrelationId(payload: Record<string, unknown>): string | null {
   );
 }
 
-function extractToolCanonicalName(payload: Record<string, unknown>): string | null {
+function extractToolCanonicalName(
+  payload: Record<string, unknown>,
+): string | null {
   const name =
     pickFirstString([
       payload.tool_name,
@@ -150,7 +161,11 @@ export function deriveIngestFields(
   const correlationId = extractCorrelationId(payload);
   let toolCanonicalName = extractToolCanonicalName(payload);
 
-  if (!toolCanonicalName && payload.tool_input && typeof payload.tool_input === "object") {
+  if (
+    !toolCanonicalName &&
+    payload.tool_input &&
+    typeof payload.tool_input === "object"
+  ) {
     const ti = payload.tool_input as Record<string, unknown>;
     toolCanonicalName =
       pickFirstString([ti.command, ti.tool, ti.name])?.trim() ||

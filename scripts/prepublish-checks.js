@@ -11,6 +11,12 @@ const packageJsonPath = path.join(repoRoot, "package.json");
 const readmePath = path.join(repoRoot, "README.md");
 const distCliPath = path.join(repoRoot, "dist", "cli.js");
 const distSchemaPath = path.join(repoRoot, "dist", "core", "schema.sql");
+const distDashboardIndexPath = path.join(
+  repoRoot,
+  "dist",
+  "dashboard",
+  "index.html",
+);
 const SEMANTIC_RELEASE_PLACEHOLDER = "0.0.0-semantically-released";
 
 const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
@@ -105,6 +111,10 @@ function assertBuildArtifacts() {
   if (!fs.existsSync(distSchemaPath)) {
     fail("missing runtime asset: dist/core/schema.sql");
   }
+
+  if (!fs.existsSync(distDashboardIndexPath)) {
+    fail("missing runtime asset: dist/dashboard/index.html");
+  }
 }
 
 function assertPacklist() {
@@ -140,6 +150,7 @@ function assertPacklist() {
         filePath !== "package.json" &&
         filePath !== "README.md" &&
         filePath !== "LICENSE" &&
+        filePath !== "assets/dashboard.png" &&
         !filePath.startsWith("dist/"),
     );
 

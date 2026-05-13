@@ -96,7 +96,10 @@ export function runContextAudit(rootDir = process.cwd()): ContextAuditResult {
   }
 
   files.sort((a, b) => b.estimatedTokens - a.estimatedTokens);
-  const totalEstimatedTokens = files.reduce((sum, file) => sum + file.estimatedTokens, 0);
+  const totalEstimatedTokens = files.reduce(
+    (sum, file) => sum + file.estimatedTokens,
+    0,
+  );
 
   return { totalEstimatedTokens, files };
 }
