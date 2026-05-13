@@ -1,8 +1,32 @@
 # agent-profiler
 
-Local-first profiling for AI coding agents.
+![Agent Profiler Dashboard](assets/dashboard.png)
 
-`agent-profiler` captures local Cursor and Codex hook events into SQLite so you can inspect recent sessions, setup state, and always-on context overhead without sending data to a remote service.
+**Agent Profiler** is a **local-first** tool for understanding how AI coding agents spend observable effort in your workspace. It records Cursor and Codex hook traffic into **SQLite** so you can review session shape, estimated token usage, tool and shell noise, always-on context weight, and simple efficiency signals—**without sending telemetry to a remote service.**
+
+Today the workflow is intentionally scoped **project-by-project**: you run commands from a repo root, store profiler config and data under **`.agent-profiler/`** beside that project, and inspect sessions with the CLI or the optional dashboard. **A future direction** is to offer a clearer opt-in path to operate primarily from the **home-directory** profile (for example global installs and multi-repo DB layout) when users want that; the current release optimizes for **per-repo isolation** and predictable paths.
+
+On **`agent-profiler init`** in **dev** mode, when the profiler directory resolves to **`<project>/.agent-profiler`**, the tool **appends a `.gitignore` rule** so the local store (including SQLite and synced dashboard assets) is **not committed** by mistake.
+
+## Dashboard (early version)
+
+Run a minimal **localhost-only** web UI over the same database and context audit used by `last`:
+
+```bash
+agent-profiler dashboard
+# open http://127.0.0.1:3737/ — use Refresh to reload metrics
+```
+
+The dashboard (**early version**) surfaces:
+
+- **Observable usage** — estimated input, output, tool/MCP result, and shell output tokens with simple bar proportions
+- **Efficiency score** — heuristic score with a small sparkline over recent keyed sessions (when present)
+- **Session timeline** — chronological strip colored by role (user, assistant, tool, shell, other)
+- **Tool result sizes** — histogram buckets for large tool payloads
+- **Context audit** — estimated tokens for common always-on instruction paths in the repo
+- **Red flags and recommendations** — aligned with the `last` command logic
+
+Static assets are copied into **`.agent-profiler/dashboard/`** when the server starts so the UI stays next to your project data. Expect **rough edges and UI iteration** in future releases.
 
 ## Requirements
 
@@ -59,6 +83,7 @@ agent-profiler audit context
 - `agent-profiler hook <source> <eventName>`: ingest one hook payload from stdin
 - `agent-profiler status`: inspect local setup and ingest state
 - `agent-profiler last`: summarize the most recent observed session
+- `agent-profiler dashboard`: serve the local dashboard (SQLite + context audit)
 - `agent-profiler audit context`: estimate always-on context token footprint
 
 ## Releases
