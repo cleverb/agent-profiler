@@ -44,7 +44,7 @@
     "prepublishOnly": "npm run build && node scripts/prepublish-checks.js",
     "prerelease": "npm run build && node scripts/prepublish-checks.js",
     "release": "npm run build && semantic-release",
-    "release:canary": "npm run build && npm_config_provenance=false auto canary",
+    "release:canary": "npm run build && npm_config_provenance=true auto canary",
     "adr-skill": "node .agents/skills/adr-agent-skill/bin/cli.cjs"
   },
   "dependencies": {
@@ -74,6 +74,7 @@
   },
   "publishConfig": {
     "access": "public",
+    "provenance": true,
     "registry": "https://registry.npmjs.org/"
   }
 }
