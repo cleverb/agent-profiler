@@ -45,7 +45,7 @@
     "prerelease": "npm run build && node scripts/prepublish-checks.js",
     "release": "semantic-release",
     "prerelease:canary": "npm run build && node scripts/prepublish-checks.js",
-    "release:canary": "auto canary",
+    "release:canary": "npm run build && auto canary",
     "adr-skill": "node .agents/skills/adr-agent-skill/bin/cli.cjs"
   },
   "dependencies": {
