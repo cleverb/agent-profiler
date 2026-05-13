@@ -1,0 +1,85 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [22]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        env:
+          HUSKY: 0
+        run: npm ci
+
+      - name: Check types
+        run: npm run lint
+
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [22]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        env:
+          HUSKY: 0
+        run: npm ci
+
+      - name: Run build
+        run: npm run build
+
+  package:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [22]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        env:
+          HUSKY: 0
+        run: npm ci
+
+      - name: Build package
+        run: npm run build
+
+      - name: Run CLI smoke checks
+        run: npm run smoke:cli
+
+      - name: Verify publish surface
+        run: node scripts/prepublish-checks.js
