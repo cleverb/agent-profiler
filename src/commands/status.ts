@@ -40,7 +40,10 @@ function hookEntryCommand(value: unknown): string {
   return "";
 }
 
-function hookConfigured(hooks: Record<string, string | CursorHookCommand[]>, eventName: string): boolean {
+function hookConfigured(
+  hooks: Record<string, string | CursorHookCommand[]>,
+  eventName: string,
+): boolean {
   return hookEntryCommand(hooks[eventName]).trim().length > 0;
 }
 
@@ -77,7 +80,8 @@ function codexEventConfigured(
   const groups = hooks[eventName] ?? [];
   for (const g of groups) {
     for (const h of g.hooks ?? []) {
-      if (typeof h.command === "string" && h.command.includes(marker)) return true;
+      if (typeof h.command === "string" && h.command.includes(marker))
+        return true;
     }
   }
   return false;
@@ -145,7 +149,9 @@ function getCursorSetupStatus(
   }
 
   const hooks = readJsonFile<CursorHooksConfig>(cursor.hookFile)?.hooks ?? {};
-  const missing = REQUIRED_CURSOR_EVENTS.filter((eventName) => !hookConfigured(hooks, eventName));
+  const missing = REQUIRED_CURSOR_EVENTS.filter(
+    (eventName) => !hookConfigured(hooks, eventName),
+  );
 
   if (missing.length > 0) {
     return {
@@ -157,18 +163,30 @@ function getCursorSetupStatus(
   const sampleCommand = hookEntryCommand(hooks.beforeSubmitPrompt);
   if (mode === "dev") {
     if (!sampleCommand.startsWith("node ")) {
-      return { state: "partial", note: "dev mode expects hooks to use `node <abs>/dist/cli.js ...`" };
+      return {
+        state: "partial",
+        note: "dev mode expects hooks to use `node <abs>/dist/cli.js ...`",
+      };
     }
     const cliPath = sampleCommand.split(" ")[1];
     if (!cliPath || !fs.existsSync(cliPath)) {
-      return { state: "partial", note: "dev hook CLI path is missing or invalid" };
+      return {
+        state: "partial",
+        note: "dev hook CLI path is missing or invalid",
+      };
     }
   } else {
     if (!sampleCommand.startsWith("agent-profiler ")) {
-      return { state: "partial", note: "prod mode expects hooks to use `agent-profiler ...`" };
+      return {
+        state: "partial",
+        note: "prod mode expects hooks to use `agent-profiler ...` from a real install on PATH",
+      };
     }
     if (!commandExistsInPath("agent-profiler")) {
-      return { state: "partial", note: "`agent-profiler` is not on PATH" };
+      return {
+        state: "partial",
+        note: "`agent-profiler` is not on PATH; `npx` only covers one-off commands",
+      };
     }
   }
 
@@ -211,23 +229,38 @@ function getCodexSetupStatus(
   }
 
   if (!sampleCommand) {
-    return { state: "partial", note: "could not find agent-profiler command in Codex hooks" };
+    return {
+      state: "partial",
+      note: "could not find agent-profiler command in Codex hooks",
+    };
   }
 
   if (mode === "dev") {
     if (!sampleCommand.startsWith("node ")) {
-      return { state: "partial", note: "dev mode expects hooks to use `node <abs>/dist/cli.js ...`" };
+      return {
+        state: "partial",
+        note: "dev mode expects hooks to use `node <abs>/dist/cli.js ...`",
+      };
     }
     const cliPath = sampleCommand.split(" ")[1];
     if (!cliPath || !fs.existsSync(cliPath)) {
-      return { state: "partial", note: "dev hook CLI path is missing or invalid" };
+      return {
+        state: "partial",
+        note: "dev hook CLI path is missing or invalid",
+      };
     }
   } else {
     if (!sampleCommand.startsWith("agent-profiler ")) {
-      return { state: "partial", note: "prod mode expects hooks to use `agent-profiler ...`" };
+      return {
+        state: "partial",
+        note: "prod mode expects hooks to use `agent-profiler ...` from a real install on PATH",
+      };
     }
     if (!commandExistsInPath("agent-profiler")) {
-      return { state: "partial", note: "`agent-profiler` is not on PATH" };
+      return {
+        state: "partial",
+        note: "`agent-profiler` is not on PATH; `npx` only covers one-off commands",
+      };
     }
   }
 
@@ -257,19 +290,18 @@ export type StatusReport = {
       setup: string;
     };
   };
-  lastEvent:
-    | {
-        createdAt: string;
-        source: string;
-        event: string;
-        estimatedTokens: number;
-      }
-    | null;
+  lastEvent: {
+    createdAt: string;
+    source: string;
+    event: string;
+    estimatedTokens: number;
+  } | null;
   dashboard: "not running";
 };
 
 export function getStatusReport(mode: "dev" | "prod" = "dev"): StatusReport {
-  const { configuredDbPath, resolvedDbPath, configPath } = resolveStatusPaths(mode);
+  const { configuredDbPath, resolvedDbPath, configPath } =
+    resolveStatusPaths(mode);
   const cursorSetup = getCursorSetupStatus(configPath, mode);
   const codexSetup = getCodexSetupStatus(configPath, mode);
 
@@ -333,7 +365,9 @@ export function runStatus(mode: "dev" | "prod" = "dev"): void {
     lines.push(`  ${formatTimestamp(report.lastEvent.createdAt)}`);
     lines.push(`  source: ${report.lastEvent.source}`);
     lines.push(`  event: ${report.lastEvent.event}`);
-    lines.push(`  estimated tokens: ${formatCount(report.lastEvent.estimatedTokens)}`);
+    lines.push(
+      `  estimated tokens: ${formatCount(report.lastEvent.estimatedTokens)}`,
+    );
   } else {
     lines.push("  none yet");
   }

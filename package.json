@@ -1,15 +1,51 @@
 {
   "name": "agent-profiler",
-  "version": "0.1.0",
+  "version": "0.0.0-semantically-released",
   "description": "Local-first profiling for AI coding agents.",
+  "keywords": [
+    "agent",
+    "profiler",
+    "cli",
+    "cursor",
+    "codex",
+    "telemetry",
+    "sqlite"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cleverb/agent-profiler.git"
+  },
+  "homepage": "https://github.com/cleverb/agent-profiler#readme",
+  "bugs": {
+    "url": "https://github.com/cleverb/agent-profiler/issues"
+  },
   "type": "module",
+  "license": "MIT",
   "bin": {
     "agent-profiler": "./dist/cli.js"
   },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "dev": "tsx src/cli.ts",
     "build": "tsc && node --input-type=module -e \"import fs from 'node:fs'; fs.copyFileSync('src/core/schema.sql','dist/core/schema.sql'); try { fs.chmodSync('dist/cli.js', 0o755); } catch { /* non-Unix or read-only */ }\"",
-    "start": "node dist/cli.js"
+    "start": "node dist/cli.js",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --check . --ignore-unknown --ignore-path .gitignore",
+    "format:fix": "prettier --write . --ignore-unknown --ignore-path .gitignore",
+    "lint": "npm run typecheck",
+    "lint-staged": "lint-staged",
+    "smoke:cli": "node scripts/smoke-cli.js",
+    "pack:dry-run": "npm run build && npm pack --dry-run --ignore-scripts",
+    "prepare": "husky",
+    "prepublishOnly": "npm run build && node scripts/prepublish-checks.js",
+    "prerelease": "npm run build && node scripts/prepublish-checks.js",
+    "release": "npm run build && semantic-release",
+    "release:canary": "npm run build && npm_config_provenance=true auto canary",
+    "adr-skill": "node .agents/skills/adr-agent-skill/bin/cli.cjs"
   },
   "dependencies": {
     "better-sqlite3": "^12.9.0",
@@ -19,8 +55,26 @@
     "node": ">=22"
   },
   "devDependencies": {
+    "@commitlint/config-conventional": "^21.0.1",
+    "@semantic-release/commit-analyzer": "^13.0.1",
+    "@semantic-release/github": "^12.0.8",
+    "@semantic-release/npm": "^13.1.5",
+    "@semantic-release/release-notes-generator": "^14.1.1",
     "@types/node": "^22.0.0",
+    "auto": "^11.3.6",
+    "boxen": "^8.0.1",
+    "commitlint": "^21.0.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.8.3",
+    "semantic-release": "^25.0.3",
     "tsx": "^4.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "zx": "^8.8.5"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "registry": "https://registry.npmjs.org/"
   }
 }

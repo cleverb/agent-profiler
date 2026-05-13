@@ -115,11 +115,19 @@ function resolveCodexDir(): string {
 }
 
 function packagedCliJsPath(): string {
-  const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+  const packageRoot = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "..",
+    "..",
+  );
   return path.join(packageRoot, "dist", "cli.js");
 }
 
-function hookCommand(mode: "dev" | "prod", source: InitSource, eventName: string): string {
+function hookCommand(
+  mode: "dev" | "prod",
+  source: InitSource,
+  eventName: string,
+): string {
   const cliPath = packagedCliJsPath();
   return mode === "dev"
     ? `node ${cliPath} hook ${source} ${eventName}`
@@ -138,7 +146,10 @@ function updateCursorIdeHooks(hooksFile: string, mode: "dev" | "prod"): void {
   writeJsonFile(hooksFile, updated);
 }
 
-function profilerMarkerSubcommand(source: InitSource, eventName: string): string {
+function profilerMarkerSubcommand(
+  source: InitSource,
+  eventName: string,
+): string {
   return `hook ${source} ${eventName}`;
 }
 
@@ -149,13 +160,17 @@ function codexGroupHasProfilerCommand(
   if (!groups) return false;
   for (const g of groups) {
     for (const h of g.hooks ?? []) {
-      if (typeof h.command === "string" && h.command.includes(marker)) return true;
+      if (typeof h.command === "string" && h.command.includes(marker))
+        return true;
     }
   }
   return false;
 }
 
-function mergeCodexProfilerHooks(hooksFile: string, mode: "dev" | "prod"): void {
+function mergeCodexProfilerHooks(
+  hooksFile: string,
+  mode: "dev" | "prod",
+): void {
   const existingRaw = readJsonFile<unknown>(hooksFile);
   const file: CodexHooksFile =
     existingRaw &&
@@ -247,7 +262,10 @@ function writeProfilerConfigMerged(
   writeJsonFile(configPath, updated);
 }
 
-export function runInit(source: InitSource, mode: "dev" | "prod" = "dev"): void {
+export function runInit(
+  source: InitSource,
+  mode: "dev" | "prod" = "dev",
+): void {
   const profilerDir = getProfilerDirByMode(mode);
   ensureDir(profilerDir);
 
@@ -265,22 +283,32 @@ export function runInit(source: InitSource, mode: "dev" | "prod" = "dev"): void 
     hooksPath = resolveCursorHookFile();
     updateCursorIdeHooks(hooksPath, mode);
     try {
-      writeProfilerConfigMerged(configPath, "cursor", {
-        enabled: true,
-        hookFile: hooksPath,
-        mode,
-        initializedAt: "",
-      }, resolvedDbPath);
+      writeProfilerConfigMerged(
+        configPath,
+        "cursor",
+        {
+          enabled: true,
+          hookFile: hooksPath,
+          mode,
+          initializedAt: "",
+        },
+        resolvedDbPath,
+      );
     } catch {
       const localConfigDir = getLocalProfileDir(process.cwd());
       ensureDir(localConfigDir);
       configPath = path.join(localConfigDir, "config.json");
-      writeProfilerConfigMerged(configPath, "cursor", {
-        enabled: true,
-        hookFile: hooksPath,
-        mode,
-        initializedAt: "",
-      }, resolvedDbPath);
+      writeProfilerConfigMerged(
+        configPath,
+        "cursor",
+        {
+          enabled: true,
+          hookFile: hooksPath,
+          mode,
+          initializedAt: "",
+        },
+        resolvedDbPath,
+      );
       usedFallbackConfigPath = true;
     }
 
@@ -291,34 +319,56 @@ export function runInit(source: InitSource, mode: "dev" | "prod" = "dev"): void 
     hooksPath = path.join(codexDir, "hooks.json");
     mergeCodexProfilerHooks(hooksPath, mode);
     try {
-      writeProfilerConfigMerged(configPath, "codex", {
-        enabled: true,
-        hookFile: hooksPath,
-        mode,
-        initializedAt: "",
-      }, resolvedDbPath);
+      writeProfilerConfigMerged(
+        configPath,
+        "codex",
+        {
+          enabled: true,
+          hookFile: hooksPath,
+          mode,
+          initializedAt: "",
+        },
+        resolvedDbPath,
+      );
     } catch {
       const localConfigDir = getLocalProfileDir(process.cwd());
       ensureDir(localConfigDir);
       configPath = path.join(localConfigDir, "config.json");
-      writeProfilerConfigMerged(configPath, "codex", {
-        enabled: true,
-        hookFile: hooksPath,
-        mode,
-        initializedAt: "",
-      }, resolvedDbPath);
+      writeProfilerConfigMerged(
+        configPath,
+        "codex",
+        {
+          enabled: true,
+          hookFile: hooksPath,
+          mode,
+          initializedAt: "",
+        },
+        resolvedDbPath,
+      );
       usedFallbackConfigPath = true;
     }
 
     console.log("Agent Profiler initialized for Codex.");
-    console.log("Note:     Enable hooks in Codex if prompted; project .codex/ must be trusted.");
+    console.log(
+      "Note:     Enable hooks in Codex if prompted; project .codex/ must be trusted.",
+    );
   }
 
   console.log(`Mode:     ${mode}`);
   console.log(`Config:   ${configPath}`);
   console.log(`Database: ${resolvedDbPath}`);
   console.log(`Hooks:    ${hooksPath}`);
+  if (mode === "prod") {
+    console.log(
+      "Note:     Prod mode requires a real `agent-profiler` install on PATH.",
+    );
+    console.log(
+      "          Use `npx agent-profiler ...` for one-off commands only.",
+    );
+  }
   if (usedFallbackConfigPath) {
-    console.log("Note:     Could not write home config in this environment; wrote local config instead.");
+    console.log(
+      "Note:     Could not write home config in this environment; wrote local config instead.",
+    );
   }
 }
