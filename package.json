@@ -43,9 +43,8 @@
     "prepare": "husky",
     "prepublishOnly": "npm run build && node scripts/prepublish-checks.js",
     "prerelease": "npm run build && node scripts/prepublish-checks.js",
-    "release": "semantic-release",
-    "prerelease:canary": "npm run build && node scripts/prepublish-checks.js",
-    "release:canary": "npm run build && auto canary",
+    "release": "npm run build && semantic-release",
+    "release:canary": "npm run build && npm_config_provenance=false auto canary",
     "adr-skill": "node .agents/skills/adr-agent-skill/bin/cli.cjs"
   },
   "dependencies": {
@@ -63,17 +62,18 @@
     "@semantic-release/release-notes-generator": "^14.1.1",
     "@types/node": "^22.0.0",
     "auto": "^11.3.6",
+    "boxen": "^8.0.1",
     "commitlint": "^21.0.1",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
     "prettier": "^3.8.3",
     "semantic-release": "^25.0.3",
     "tsx": "^4.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "zx": "^8.8.5"
   },
   "publishConfig": {
     "access": "public",
-    "provenance": false,
     "registry": "https://registry.npmjs.org/"
   }
 }
