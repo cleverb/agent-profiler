@@ -11,6 +11,7 @@ const packageJsonPath = path.join(repoRoot, "package.json");
 const readmePath = path.join(repoRoot, "README.md");
 const distCliPath = path.join(repoRoot, "dist", "cli.js");
 const distSchemaPath = path.join(repoRoot, "dist", "core", "schema.sql");
+const SEMANTIC_RELEASE_PLACEHOLDER = "0.0.0-semantically-released";
 
 const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
 const failures = [];
@@ -23,6 +24,12 @@ function npmCommand() {
   return process.platform === "win32" ? "npm.cmd" : "npm";
 }
 
+function isPublishableVersion(version) {
+  return /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/.test(
+    version,
+  );
+}
+
 function assertRequiredMetadata() {
   if (packageJson.name !== "agent-profiler") {
     fail(
@@ -30,8 +37,14 @@ function assertRequiredMetadata() {
     );
   }
 
-  if (packageJson.version !== "0.0.0-semantically-released") {
-    fail("package version must stay on the semantic-release placeholder");
+  if (
+    typeof packageJson.version !== "string" ||
+    (packageJson.version !== SEMANTIC_RELEASE_PLACEHOLDER &&
+      !isPublishableVersion(packageJson.version))
+  ) {
+    fail(
+      "package version must be the semantic-release placeholder or a valid publish-time semver",
+    );
   }
 
   if (packageJson.license !== "MIT") {
