@@ -94,7 +94,9 @@ export function resolveHookWorkspacePath(
   ];
   for (const c of candidates) {
     if (!c) continue;
-    return path.isAbsolute(c) ? path.normalize(c) : path.resolve(process.cwd(), c);
+    return path.isAbsolute(c)
+      ? path.normalize(c)
+      : path.resolve(process.cwd(), c);
   }
   return path.resolve(process.cwd());
 }
@@ -117,10 +119,15 @@ function gitOutput(workspacePath: string, args: string[]): string | null {
 /**
  * Best-effort git context for `workspacePath`. Non-repo → git* fields null; `workspacePath` still set.
  */
-export function resolveWorkspaceGitMeta(workspacePath: string): WorkspaceGitMeta {
+export function resolveWorkspaceGitMeta(
+  workspacePath: string,
+): WorkspaceGitMeta {
   const normalizedWorkspacePath = path.normalize(workspacePath);
   const workspaceHomePath = deriveHomePath(normalizedWorkspacePath);
-  const inside = gitOutput(normalizedWorkspacePath, ["rev-parse", "--is-inside-work-tree"]);
+  const inside = gitOutput(normalizedWorkspacePath, [
+    "rev-parse",
+    "--is-inside-work-tree",
+  ]);
   if (inside !== "true") {
     return {
       workspacePath: normalizedWorkspacePath,
@@ -134,8 +141,15 @@ export function resolveWorkspaceGitMeta(workspacePath: string): WorkspaceGitMeta
     };
   }
 
-  const root = gitOutput(normalizedWorkspacePath, ["rev-parse", "--show-toplevel"]);
-  const branch = gitOutput(normalizedWorkspacePath, ["rev-parse", "--abbrev-ref", "HEAD"]);
+  const root = gitOutput(normalizedWorkspacePath, [
+    "rev-parse",
+    "--show-toplevel",
+  ]);
+  const branch = gitOutput(normalizedWorkspacePath, [
+    "rev-parse",
+    "--abbrev-ref",
+    "HEAD",
+  ]);
 
   const gitRepoRoot = root ? path.normalize(root) : null;
   const gitRepoRootHomePath = deriveHomePath(gitRepoRoot);

@@ -38,18 +38,18 @@ Create a local-first CLI that captures observable AI coding-agent events, stores
 
 The first major command should be:
 
-~~~bash
+```bash
 npx agent-profiler last
-~~~
+```
 
 It should answer:
 
-~~~txt
+```txt
 What happened in my most recent agent session?
 How much observable context/output/tool noise did it produce?
 Were there obvious waste patterns?
 What should I change?
-~~~
+```
 
 This one report proves the product.
 
@@ -63,19 +63,19 @@ However, the architecture should treat Cursor as an adapter, not as the whole pr
 
 Design for future support of:
 
-~~~txt
+```txt
 Cursor
 Claude Code
 Codex
 Generic CLI wrappers
 MCP tools
-~~~
+```
 
 ---
 
 ## Core Architecture
 
-~~~txt
+```txt
 agent-profiler/
   core/
     event schema
@@ -99,14 +99,14 @@ agent-profiler/
     claude-code/
     codex/
     shared/
-~~~
+```
 
 The main architectural principle:
 
-~~~txt
+```txt
 Each supported environment gets its own collector.
 All collectors normalize into the same local event schema.
-~~~
+```
 
 The database should not care whether an event came from Cursor, Claude Code, Codex, or another source.
 
@@ -116,13 +116,13 @@ The database should not care whether an event came from Cursor, Claude Code, Cod
 
 For version `0.1`, implement only the essentials.
 
-~~~bash
+```bash
 agent-profiler init cursor
 agent-profiler hook cursor <eventName>
 agent-profiler status
 agent-profiler last
 agent-profiler audit context
-~~~
+```
 
 ### Command: `init cursor`
 
@@ -132,17 +132,17 @@ Create local configuration, local SQLite DB, and Cursor hook wiring.
 
 It should create or update:
 
-~~~txt
+```txt
 ~/.agent-profiler/config.json
 ~/.agent-profiler/events.sqlite
 .cursor/hooks.json or ~/.cursor/hooks.json
-~~~
+```
 
 Cursor hook entries should call something like:
 
-~~~bash
+```bash
 agent-profiler hook cursor beforeSubmitPrompt
-~~~
+```
 
 ### Command: `hook cursor <eventName>`
 
@@ -152,7 +152,7 @@ Read JSON from stdin, normalize the event, estimate observable token usage, and 
 
 The hook command should:
 
-~~~txt
+```txt
 1. Read stdin
 2. Parse JSON safely
 3. Normalize through the Cursor adapter
@@ -160,7 +160,7 @@ The hook command should:
 5. Hash the raw payload
 6. Insert event into SQLite
 7. Exit cleanly so Cursor can continue
-~~~
+```
 
 ### Command: `status`
 
@@ -170,7 +170,7 @@ Show whether Agent Profiler is configured and receiving events.
 
 Example output:
 
-~~~txt
+```txt
 Agent Profiler Status
 
 Database:
@@ -187,7 +187,7 @@ Last event:
 
 Dashboard:
   not running
-~~~
+```
 
 ### Command: `last`
 
@@ -205,7 +205,7 @@ Scan the current repo for likely always-on agent context files and estimate thei
 
 Files to scan initially:
 
-~~~txt
+```txt
 AGENTS.md
 CLAUDE.md
 .cursorrules
@@ -217,13 +217,13 @@ CLAUDE.md
 .claude/commands/**
 .claude/agents/**
 .claude/skills/**
-~~~
+```
 
 ---
 
 ## Suggested Repo Structure
 
-~~~txt
+```txt
 agent-profiler/
   package.json
   tsconfig.json
@@ -254,17 +254,17 @@ agent-profiler/
 
     reporters/
       lastSessionReport.ts
-~~~
+```
 
 Keep it boring and maintainable:
 
-~~~txt
+```txt
 TypeScript
 Node
 SQLite
 Commander
 better-sqlite3
-~~~
+```
 
 ---
 
@@ -272,18 +272,18 @@ better-sqlite3
 
 From the laptop:
 
-~~~bash
+```bash
 mkdir agent-profiler
 cd agent-profiler
 git init
 npm init -y
 npm install commander better-sqlite3
 npm install -D typescript tsx @types/node
-~~~
+```
 
 Create `tsconfig.json`:
 
-~~~json
+```json
 {
   "compilerOptions": {
     "target": "ES2022",
@@ -298,11 +298,11 @@ Create `tsconfig.json`:
   },
   "include": ["src"]
 }
-~~~
+```
 
 Update `package.json`:
 
-~~~json
+```json
 {
   "name": "agent-profiler",
   "version": "0.1.0",
@@ -326,7 +326,7 @@ Update `package.json`:
     "typescript": "^5.0.0"
   }
 }
-~~~
+```
 
 ---
 
@@ -334,7 +334,7 @@ Update `package.json`:
 
 Create `src/core/schema.sql`:
 
-~~~sql
+```sql
 CREATE TABLE IF NOT EXISTS events (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   created_at TEXT NOT NULL,
@@ -357,7 +357,7 @@ ON events(session_id, created_at);
 
 CREATE INDEX IF NOT EXISTS idx_events_source
 ON events(source, created_at);
-~~~
+```
 
 Do not overdesign the DB yet.
 
@@ -367,12 +367,8 @@ Do not overdesign the DB yet.
 
 Create a shared internal shape that every adapter maps into.
 
-~~~ts
-export type AgentEventSource =
-  | "cursor"
-  | "claude-code"
-  | "codex"
-  | "generic";
+```ts
+export type AgentEventSource = "cursor" | "claude-code" | "codex" | "generic";
 
 export type AgentEventRole =
   | "user_prompt"
@@ -400,7 +396,7 @@ export type NormalizedAgentEvent = {
   estimatedTotalTokens: number;
   rawPayload: unknown;
 };
-~~~
+```
 
 Everything adapters do should reduce to this model.
 
@@ -412,23 +408,23 @@ Start simple.
 
 Create `src/core/tokens.ts`:
 
-~~~ts
+```ts
 export function estimateTokens(text: string): number {
   if (!text) return 0;
   return Math.max(1, Math.ceil(text.length / 4));
 }
-~~~
+```
 
 Do not block the MVP on perfect tokenization.
 
 Later versions can add:
 
-~~~txt
+```txt
 model-aware tokenizers
 provider-specific estimates
 cached-token approximations
 tool-specific accounting
-~~~
+```
 
 But version `0.1` only needs a rough observable estimate.
 
@@ -440,27 +436,27 @@ Create `src/adapters/cursor.ts`.
 
 The adapter should accept:
 
-~~~txt
+```txt
 eventName
 raw payload
-~~~
+```
 
 And return a normalized event.
 
 Initial mapping idea:
 
-~~~txt
+```txt
 Cursor beforeSubmitPrompt  -> user_prompt
 Cursor afterAgentResponse  -> assistant_output
 Cursor afterShellExecution -> shell_output
 Cursor afterFileEdit       -> file_edit
 Cursor stop                -> session_stop
 Unknown events             -> unknown
-~~~
+```
 
 The adapter should defensively extract observable text from common fields:
 
-~~~txt
+```txt
 prompt
 message
 response
@@ -470,7 +466,7 @@ stdout
 stderr
 diff
 filePath
-~~~
+```
 
 Do not assume Cursor payloads are stable.
 
@@ -484,17 +480,17 @@ The hook command should be safe and quiet.
 
 Requirements:
 
-~~~txt
+```txt
 - Never crash Cursor if JSON parsing fails.
 - Store raw payload, even if normalization is incomplete.
 - Use "unknown" role when unsure.
 - Always exit successfully unless there is a severe local filesystem/database issue.
 - Avoid logging noisy output unless debugging is enabled.
-~~~
+```
 
 Pseudo-flow:
 
-~~~ts
+```ts
 const eventName = args.eventName;
 const rawStdin = await readStdin();
 
@@ -508,7 +504,7 @@ try {
 
 const normalized = normalizeCursorEvent(eventName, payload);
 await insertEvent(normalized);
-~~~
+```
 
 ---
 
@@ -516,7 +512,7 @@ await insertEvent(normalized);
 
 The `agent-profiler last` report should look roughly like this:
 
-~~~txt
+```txt
 Agent Profiler: Last Session
 
 Source:
@@ -558,7 +554,7 @@ Recommendations:
   1. Add a focused rule for ProductCard layering and anchor semantics.
   2. Cap or summarize repeated test output before asking the agent to continue.
   3. Move long design-system references into an on-demand skill.
-~~~
+```
 
 This is the heart of the product.
 
@@ -572,57 +568,57 @@ Implement simple, explainable heuristics first.
 
 Trigger when:
 
-~~~txt
+```txt
 same file edited 5+ times in one session
-~~~
+```
 
 ### `large_shell_output`
 
 Trigger when:
 
-~~~txt
+```txt
 shell output exceeds 4,000 estimated tokens
-~~~
+```
 
 ### `large_tool_result`
 
 Trigger when:
 
-~~~txt
+```txt
 tool result exceeds 4,000 estimated tokens
-~~~
+```
 
 ### `oversized_prompt`
 
 Trigger when:
 
-~~~txt
+```txt
 single prompt exceeds 8,000 estimated tokens
-~~~
+```
 
 ### `context_bloat`
 
 Trigger when:
 
-~~~txt
+```txt
 repo instruction files exceed 6,000 estimated tokens
-~~~
+```
 
 ### `thrashing_loop`
 
 Trigger when:
 
-~~~txt
+```txt
 same command runs 3+ times with similar failure text
-~~~
+```
 
 ### `low_signal_session`
 
 Trigger when:
 
-~~~txt
+```txt
 high total observable tokens but few or no file edits
-~~~
+```
 
 These are simple, explainable, and useful.
 
@@ -636,7 +632,7 @@ Start at `100`.
 
 Subtract points:
 
-~~~txt
+```txt
 - 5 to 25 points for always-on context bloat
 - 5 to 20 points for repeated shell error loops
 - 5 to 20 points for same-file edit thrashing
@@ -644,18 +640,18 @@ Subtract points:
 - 5 to 15 points for repeated tool calls with similar output
 - 5 to 10 points for very large average prompt size
 - 5 to 10 points for low edit-to-output ratio
-~~~
+```
 
 Do not pretend the score is scientific.
 
 Use language like:
 
-~~~txt
+```txt
 Efficiency score: 68 / 100
 
 Interpretation:
 This was a moderately wasteful session. Most waste came from large tool responses and repeated edits to the same files.
-~~~
+```
 
 ---
 
@@ -665,7 +661,7 @@ The `audit context` command should scan likely always-on or frequently reference
 
 Initial file patterns:
 
-~~~txt
+```txt
 AGENTS.md
 CLAUDE.md
 .cursorrules
@@ -677,11 +673,11 @@ CLAUDE.md
 .claude/commands/**
 .claude/agents/**
 .claude/skills/**
-~~~
+```
 
 Example output:
 
-~~~txt
+```txt
 Agent Profiler: Context Audit
 
 Estimated always-on / agent-adjacent context:
@@ -697,7 +693,7 @@ Recommendations:
   1. Move design-system.mdc into an on-demand skill unless it is needed for every task.
   2. Keep always-on rules short, direct, and behavioral.
   3. Move long examples and reference docs behind explicit commands or skills.
-~~~
+```
 
 ---
 
@@ -707,19 +703,19 @@ Do not build this first.
 
 Later command:
 
-~~~bash
+```bash
 agent-profiler dashboard
-~~~
+```
 
 Could launch:
 
-~~~txt
+```txt
 http://localhost:3737
-~~~
+```
 
 Future dashboard views:
 
-~~~txt
+```txt
 Overview
   Daily observable token estimate
   Sessions by repo
@@ -751,7 +747,7 @@ Doctor
   DB health
   Cursor config health
   Known limitations
-~~~
+```
 
 But the MVP should prove itself through CLI reports first.
 
@@ -763,23 +759,23 @@ After reporting works, add installable skills.
 
 Possible command:
 
-~~~bash
+```bash
 agent-profiler skills install cursor
-~~~
+```
 
 Potential skills:
 
-~~~txt
+```txt
 token-hygiene
 context-audit
 mcp-response-budget
 rule-refactor
 thrash-detection
-~~~
+```
 
 Example generated recommendation file:
 
-~~~md
+```md
 # Agent Profiler Recommendation
 
 ## Problem
@@ -805,7 +801,7 @@ Split these into:
 ## Suggested Agent Task
 
 Audit our Cursor rules for always-on context bloat. Preserve intent, but split large reference material into on-demand skills. Keep always-on rules under 2,000 tokens total.
-~~~
+```
 
 ---
 
@@ -813,27 +809,27 @@ Audit our Cursor rules for always-on context bloat. Preserve intent, but split l
 
 Version `0.1` is successful when this works:
 
-~~~bash
+```bash
 agent-profiler init cursor
-~~~
+```
 
 Then the developer uses Cursor normally for one session.
 
 Then:
 
-~~~bash
+```bash
 agent-profiler last
-~~~
+```
 
 Produces:
 
-~~~txt
+```txt
 - estimated observable usage
 - event counts
 - largest events
 - obvious red flags
 - practical recommendations
-~~~
+```
 
 That is enough to demo.
 
@@ -843,13 +839,13 @@ That is enough to demo.
 
 Suggested first commit:
 
-~~~txt
+```txt
 feat: add local event store and cursor hook collector
-~~~
+```
 
 Include:
 
-~~~txt
+```txt
 - CLI shell with commander
 - SQLite schema
 - hook command that reads stdin
@@ -857,7 +853,7 @@ Include:
 - token estimator
 - event insertion
 - status command
-~~~
+```
 
 ---
 
@@ -865,20 +861,20 @@ Include:
 
 Suggested second commit:
 
-~~~txt
+```txt
 feat: add last-session report with basic red flags
-~~~
+```
 
 Include:
 
-~~~txt
+```txt
 - session lookup
 - event aggregation
 - token totals
 - red flag detection
 - simple efficiency score
 - text report output
-~~~
+```
 
 ---
 
@@ -886,18 +882,18 @@ Include:
 
 Suggested third commit:
 
-~~~txt
+```txt
 feat: add repo context audit
-~~~
+```
 
 Include:
 
-~~~txt
+```txt
 - scan common agent instruction files
 - estimate token footprint
 - rank largest files
 - generate context bloat recommendations
-~~~
+```
 
 ---
 
@@ -905,7 +901,7 @@ Include:
 
 Build in this order:
 
-~~~txt
+```txt
 1. Package skeleton
 2. SQLite setup
 3. CLI shell
@@ -916,7 +912,7 @@ Build in this order:
 8. Last-session report
 9. Red flag detection
 10. Context audit
-~~~
+```
 
 Do not build the dashboard until the CLI is clearly useful.
 
@@ -926,25 +922,25 @@ Do not build the dashboard until the CLI is clearly useful.
 
 Use this language:
 
-~~~txt
+```txt
 Agent Profiler is a local-first profiler for AI coding agents.
 It observes local agent events, estimates visible context and output size, and identifies patterns that make agent sessions expensive, noisy, or inefficient.
-~~~
+```
 
 Avoid this language:
 
-~~~txt
+```txt
 Tracks exact Cursor spend.
 Measures official token billing.
 Replaces provider dashboards.
 Guarantees token accuracy.
-~~~
+```
 
 Preferred disclaimer:
 
-~~~txt
+```txt
 Agent Profiler estimates observable local usage. It does not replace official provider billing or admin dashboards.
-~~~
+```
 
 ---
 
@@ -952,7 +948,7 @@ Agent Profiler estimates observable local usage. It does not replace official pr
 
 Agent Profiler should eventually support:
 
-~~~txt
+```txt
 Cursor
 Claude Code
 Codex
@@ -963,18 +959,18 @@ installable remediation skills
 team-level export
 repo-level context linting
 agent instruction refactoring
-~~~
+```
 
 The strategic goal is to move teams from vague complaints like:
 
-~~~txt
+```txt
 Cursor is expensive.
-~~~
+```
 
 To actionable diagnosis like:
 
-~~~txt
+```txt
 This repo has a 9,000-token always-on rule file, a noisy MCP tool returning 12,000-token responses, and an agent loop editing the same file 11 times.
-~~~
+```
 
 That is the value proposition.

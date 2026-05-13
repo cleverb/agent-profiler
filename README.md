@@ -1,4 +1,4 @@
-# agent-profiler
+# Agent Profiler
 
 ![Agent Profiler Dashboard](assets/dashboard.png)
 
@@ -70,6 +70,11 @@ agent-profiler status
 agent-profiler last
 agent-profiler audit context
 ```
+
+### Hook approval and restarts
+
+- **Codex**: Hooks must be **approved** before they run—confirm when prompted or enable them in the **Codex plugin settings**.
+- **Cursor**: **Restart Cursor** after `init` so hook configuration reliably takes effect.
 
 ## `npx` vs `--mode prod`
 

@@ -210,7 +210,7 @@ When implementing code guided by an ADR, add a comment referencing it:
 ```typescript
 // ADR: Using better-sqlite3 for test database
 // See: docs/decisions/ADR-001-use-sqlite-for-test-database.md
-import Database from 'better-sqlite3';
+import Database from "better-sqlite3";
 ```
 
 Keep these lightweight — one comment at the entry point, not on every line. The goal is discoverability: when a future agent reads this code, they can find the reasoning.

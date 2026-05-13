@@ -4,6 +4,32 @@ import { fileURLToPath } from "node:url";
 import { openDb, resolveUsableDbPath } from "../core/db.js";
 import { getHomeProfileDir, getLocalProfileDir } from "../core/profile.js";
 
+const GITIGNORE_MARKER = "# Agent Profiler local store";
+const GITIGNORE_ENTRY = ".agent-profiler/";
+
+function ensureProfilerGitignore(projectRoot: string): void {
+  const gitignorePath = path.join(projectRoot, ".gitignore");
+  const block = `${GITIGNORE_MARKER}\n${GITIGNORE_ENTRY}\n`;
+
+  let existing = "";
+  try {
+    existing = fs.readFileSync(gitignorePath, "utf8");
+  } catch {
+    fs.writeFileSync(gitignorePath, block, "utf8");
+    return;
+  }
+
+  const lines = existing.split(/\r?\n/);
+  const hasEntry = lines.some(
+    (line) =>
+      line.trim() === GITIGNORE_ENTRY || line.trim() === ".agent-profiler",
+  );
+  if (hasEntry) return;
+
+  const suffix = existing.endsWith("\n") || existing.length === 0 ? "" : "\n";
+  fs.appendFileSync(gitignorePath, `${suffix}\n${block}`, "utf8");
+}
+
 export type InitSource = "cursor" | "codex";
 
 type CursorAdapterConfig = {
@@ -274,6 +300,13 @@ export function runInit(
 
   const db = openDb(resolvedDbPath);
   db.close();
+
+  if (mode === "dev") {
+    const localProfiler = path.resolve(getLocalProfileDir(process.cwd()));
+    if (path.resolve(profilerDir) === localProfiler) {
+      ensureProfilerGitignore(process.cwd());
+    }
+  }
 
   let hooksPath = "";
   let configPath = path.join(profilerDir, "config.json");

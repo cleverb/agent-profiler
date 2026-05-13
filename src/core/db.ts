@@ -11,7 +11,10 @@ import type { WorkspaceGitMeta } from "./gitWorkspace.js";
 const HOME_DIR = path.join(os.homedir(), ".agent-profiler");
 const WORKSPACE_DIR = path.join(process.cwd(), ".agent-profiler");
 /** Same directory as this module: `src/core` when using tsx, `dist/core` when using build + copied schema. */
-const SCHEMA_PATH = path.join(path.dirname(fileURLToPath(import.meta.url)), "schema.sql");
+const SCHEMA_PATH = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "schema.sql",
+);
 
 export function getDefaultDbPath(): string {
   const fromEnv = process.env.AGENT_PROFILER_DB_PATH;
@@ -85,7 +88,9 @@ function migrateTableColumns(
   tableName: "events" | "interaction_spans",
   columnsToAdd: ColumnMigration[],
 ): void {
-  const columns = db.prepare(`PRAGMA table_info(${tableName})`).all() as { name: string }[];
+  const columns = db.prepare(`PRAGMA table_info(${tableName})`).all() as {
+    name: string;
+  }[];
   const names = new Set(columns.map((c) => c.name));
 
   for (const column of columnsToAdd) {
@@ -98,7 +103,10 @@ function migrateTableColumns(
 
 function migrateEventsSchema(db: SqliteDatabase): void {
   migrateTableColumns(db, "events", [
-    { name: "workspace_path", sql: `ALTER TABLE events ADD COLUMN workspace_path TEXT` },
+    {
+      name: "workspace_path",
+      sql: `ALTER TABLE events ADD COLUMN workspace_path TEXT`,
+    },
     {
       name: "workspace_home_rel_path",
       sql: `ALTER TABLE events ADD COLUMN workspace_home_rel_path TEXT`,
@@ -107,7 +115,10 @@ function migrateEventsSchema(db: SqliteDatabase): void {
       name: "workspace_display_path",
       sql: `ALTER TABLE events ADD COLUMN workspace_display_path TEXT`,
     },
-    { name: "git_repo_root", sql: `ALTER TABLE events ADD COLUMN git_repo_root TEXT` },
+    {
+      name: "git_repo_root",
+      sql: `ALTER TABLE events ADD COLUMN git_repo_root TEXT`,
+    },
     {
       name: "git_repo_root_home_rel_path",
       sql: `ALTER TABLE events ADD COLUMN git_repo_root_home_rel_path TEXT`,
@@ -116,18 +127,30 @@ function migrateEventsSchema(db: SqliteDatabase): void {
       name: "git_repo_root_display_path",
       sql: `ALTER TABLE events ADD COLUMN git_repo_root_display_path TEXT`,
     },
-    { name: "git_repo_name", sql: `ALTER TABLE events ADD COLUMN git_repo_name TEXT` },
-    { name: "git_branch", sql: `ALTER TABLE events ADD COLUMN git_branch TEXT` },
+    {
+      name: "git_repo_name",
+      sql: `ALTER TABLE events ADD COLUMN git_repo_name TEXT`,
+    },
+    {
+      name: "git_branch",
+      sql: `ALTER TABLE events ADD COLUMN git_branch TEXT`,
+    },
     {
       name: "interaction_kind",
       sql: `ALTER TABLE events ADD COLUMN interaction_kind TEXT`,
     },
-    { name: "correlation_id", sql: `ALTER TABLE events ADD COLUMN correlation_id TEXT` },
+    {
+      name: "correlation_id",
+      sql: `ALTER TABLE events ADD COLUMN correlation_id TEXT`,
+    },
     {
       name: "tool_canonical_name",
       sql: `ALTER TABLE events ADD COLUMN tool_canonical_name TEXT`,
     },
-    { name: "mcp_server", sql: `ALTER TABLE events ADD COLUMN mcp_server TEXT` },
+    {
+      name: "mcp_server",
+      sql: `ALTER TABLE events ADD COLUMN mcp_server TEXT`,
+    },
     { name: "mcp_tool", sql: `ALTER TABLE events ADD COLUMN mcp_tool TEXT` },
     {
       name: "payload_byte_length",
@@ -142,13 +165,22 @@ function migrateEventsSchema(db: SqliteDatabase): void {
 
 function migrateInteractionSpansSchema(db: SqliteDatabase): void {
   migrateTableColumns(db, "interaction_spans", [
-    { name: "turn_id", sql: `ALTER TABLE interaction_spans ADD COLUMN turn_id TEXT` },
+    {
+      name: "turn_id",
+      sql: `ALTER TABLE interaction_spans ADD COLUMN turn_id TEXT`,
+    },
     {
       name: "tool_canonical_name",
       sql: `ALTER TABLE interaction_spans ADD COLUMN tool_canonical_name TEXT`,
     },
-    { name: "mcp_server", sql: `ALTER TABLE interaction_spans ADD COLUMN mcp_server TEXT` },
-    { name: "mcp_tool", sql: `ALTER TABLE interaction_spans ADD COLUMN mcp_tool TEXT` },
+    {
+      name: "mcp_server",
+      sql: `ALTER TABLE interaction_spans ADD COLUMN mcp_server TEXT`,
+    },
+    {
+      name: "mcp_tool",
+      sql: `ALTER TABLE interaction_spans ADD COLUMN mcp_tool TEXT`,
+    },
     {
       name: "pre_event_id",
       sql: `ALTER TABLE interaction_spans ADD COLUMN pre_event_id INTEGER`,
@@ -197,9 +229,18 @@ function migrateInteractionSpansSchema(db: SqliteDatabase): void {
       name: "git_repo_name",
       sql: `ALTER TABLE interaction_spans ADD COLUMN git_repo_name TEXT`,
     },
-    { name: "git_branch", sql: `ALTER TABLE interaction_spans ADD COLUMN git_branch TEXT` },
-    { name: "started_at", sql: `ALTER TABLE interaction_spans ADD COLUMN started_at TEXT` },
-    { name: "completed_at", sql: `ALTER TABLE interaction_spans ADD COLUMN completed_at TEXT` },
+    {
+      name: "git_branch",
+      sql: `ALTER TABLE interaction_spans ADD COLUMN git_branch TEXT`,
+    },
+    {
+      name: "started_at",
+      sql: `ALTER TABLE interaction_spans ADD COLUMN started_at TEXT`,
+    },
+    {
+      name: "completed_at",
+      sql: `ALTER TABLE interaction_spans ADD COLUMN completed_at TEXT`,
+    },
   ]);
 
   db.exec(
@@ -554,7 +595,9 @@ export type StoredEventSummary = {
   estimatedTotalTokens: number;
 };
 
-export function getLastEventSummary(db: SqliteDatabase): StoredEventSummary | null {
+export function getLastEventSummary(
+  db: SqliteDatabase,
+): StoredEventSummary | null {
   const row = db
     .prepare(
       `
@@ -607,7 +650,9 @@ export function getEventsForLatestSession(db: SqliteDatabase): StoredEvent[] {
       LIMIT 1
       `,
     )
-    .get() as { source: string; sessionId: string | null; repoPath: string | null } | undefined;
+    .get() as
+    | { source: string; sessionId: string | null; repoPath: string | null }
+    | undefined;
 
   if (!latest) return [];
 
@@ -616,27 +661,7 @@ export function getEventsForLatestSession(db: SqliteDatabase): StoredEvent[] {
         .prepare(
           `
           SELECT
-            id,
-            created_at AS createdAt,
-            source,
-            source_event AS sourceEvent,
-            repo_path AS repoPath,
-            session_id AS sessionId,
-            turn_id AS turnId,
-            model,
-            role,
-            estimated_input_tokens AS estimatedInputTokens,
-            estimated_output_tokens AS estimatedOutputTokens,
-            estimated_total_tokens AS estimatedTotalTokens,
-            raw_payload AS rawPayload,
-            workspace_path AS workspacePath,
-            workspace_home_rel_path AS workspaceHomeRelPath,
-            workspace_display_path AS workspaceDisplayPath,
-            git_repo_root AS gitRepoRoot,
-            git_repo_root_home_rel_path AS gitRepoRootHomeRelPath,
-            git_repo_root_display_path AS gitRepoRootDisplayPath,
-            git_repo_name AS gitRepoName,
-            git_branch AS gitBranch
+${STORED_EVENT_SELECT}
           FROM events
           WHERE source = ? AND session_id = ?
           ORDER BY created_at ASC, id ASC
@@ -647,27 +672,7 @@ export function getEventsForLatestSession(db: SqliteDatabase): StoredEvent[] {
         .prepare(
           `
           SELECT
-            id,
-            created_at AS createdAt,
-            source,
-            source_event AS sourceEvent,
-            repo_path AS repoPath,
-            session_id AS sessionId,
-            turn_id AS turnId,
-            model,
-            role,
-            estimated_input_tokens AS estimatedInputTokens,
-            estimated_output_tokens AS estimatedOutputTokens,
-            estimated_total_tokens AS estimatedTotalTokens,
-            raw_payload AS rawPayload,
-            workspace_path AS workspacePath,
-            workspace_home_rel_path AS workspaceHomeRelPath,
-            workspace_display_path AS workspaceDisplayPath,
-            git_repo_root AS gitRepoRoot,
-            git_repo_root_home_rel_path AS gitRepoRootHomeRelPath,
-            git_repo_root_display_path AS gitRepoRootDisplayPath,
-            git_repo_name AS gitRepoName,
-            git_branch AS gitBranch
+${STORED_EVENT_SELECT}
           FROM events
           WHERE source = ? AND repo_path IS ?
           ORDER BY created_at DESC, id DESC
@@ -678,4 +683,188 @@ export function getEventsForLatestSession(db: SqliteDatabase): StoredEvent[] {
         .reverse();
 
   return rows as StoredEvent[];
+}
+
+const STORED_EVENT_SELECT = `
+          id,
+          created_at AS createdAt,
+          source,
+          source_event AS sourceEvent,
+          repo_path AS repoPath,
+          session_id AS sessionId,
+          turn_id AS turnId,
+          model,
+          role,
+          estimated_input_tokens AS estimatedInputTokens,
+          estimated_output_tokens AS estimatedOutputTokens,
+          estimated_total_tokens AS estimatedTotalTokens,
+          raw_payload AS rawPayload,
+          workspace_path AS workspacePath,
+          workspace_home_rel_path AS workspaceHomeRelPath,
+          workspace_display_path AS workspaceDisplayPath,
+          git_repo_root AS gitRepoRoot,
+          git_repo_root_home_rel_path AS gitRepoRootHomeRelPath,
+          git_repo_root_display_path AS gitRepoRootDisplayPath,
+          git_repo_name AS gitRepoName,
+          git_branch AS gitBranch
+`;
+
+export type LatestSessionDescriptor = {
+  source: string;
+  sessionId: string | null;
+  repoPath: string | null;
+};
+
+export function getLatestSessionDescriptor(
+  db: SqliteDatabase,
+): LatestSessionDescriptor | null {
+  const latest = db
+    .prepare(
+      `
+      SELECT source, session_id AS sessionId, repo_path AS repoPath
+      FROM events
+      ORDER BY created_at DESC
+      LIMIT 1
+      `,
+    )
+    .get() as LatestSessionDescriptor | undefined;
+
+  return latest ?? null;
+}
+
+export type RecentSessionRow = {
+  source: string;
+  sessionId: string;
+  repoPath: string | null;
+  startedAt: string;
+  endedAt: string;
+  eventCount: number;
+};
+
+export function listRecentSessions(
+  db: SqliteDatabase,
+  limit: number,
+): RecentSessionRow[] {
+  const rows = db
+    .prepare(
+      `
+      SELECT
+        source AS source,
+        session_id AS sessionId,
+        MAX(repo_path) AS repoPath,
+        MIN(created_at) AS startedAt,
+        MAX(created_at) AS endedAt,
+        COUNT(*) AS eventCount
+      FROM events
+      WHERE session_id IS NOT NULL AND LENGTH(TRIM(session_id)) > 0
+      GROUP BY source, session_id
+      ORDER BY endedAt DESC
+      LIMIT ?
+      `,
+    )
+    .all(limit) as RecentSessionRow[];
+
+  return rows;
+}
+
+export function getEventsForSession(
+  db: SqliteDatabase,
+  source: string,
+  sessionId: string,
+): StoredEvent[] {
+  const rows = db
+    .prepare(
+      `
+          SELECT
+      ${STORED_EVENT_SELECT}
+          FROM events
+          WHERE source = ? AND session_id = ?
+          ORDER BY created_at ASC, id ASC
+          `,
+    )
+    .all(source, sessionId);
+
+  return rows as StoredEvent[];
+}
+
+/** Latest window used when session_id is absent (matches getEventsForLatestSession fallback). */
+export function getEventsForLegacyRepoWindow(
+  db: SqliteDatabase,
+  source: string,
+  repoPath: string | null,
+): StoredEvent[] {
+  const rows = db
+    .prepare(
+      `
+          SELECT
+      ${STORED_EVENT_SELECT}
+          FROM events
+          WHERE source = ? AND repo_path IS ?
+          ORDER BY created_at DESC, id DESC
+          LIMIT 200
+          `,
+    )
+    .all(source, repoPath ?? null);
+
+  return (rows as StoredEvent[]).reverse();
+}
+
+export type TimelineEventRow = {
+  id: number;
+  createdAt: string;
+  role: string;
+  turnId: string | null;
+  estimatedTotalTokens: number;
+  sourceEvent: string;
+};
+
+export function getSessionTimeline(
+  db: SqliteDatabase,
+  source: string,
+  sessionId: string,
+): TimelineEventRow[] {
+  const rows = db
+    .prepare(
+      `
+      SELECT
+        id,
+        created_at AS createdAt,
+        role,
+        turn_id AS turnId,
+        estimated_total_tokens AS estimatedTotalTokens,
+        source_event AS sourceEvent
+      FROM events
+      WHERE source = ? AND session_id = ?
+      ORDER BY created_at ASC, id ASC
+      `,
+    )
+    .all(source, sessionId);
+
+  return rows as TimelineEventRow[];
+}
+
+export function getLegacyRepoTimeline(
+  db: SqliteDatabase,
+  source: string,
+  repoPath: string | null,
+): TimelineEventRow[] {
+  const rows = db
+    .prepare(
+      `
+      SELECT
+        id,
+        created_at AS createdAt,
+        role,
+        turn_id AS turnId,
+        estimated_total_tokens AS estimatedTotalTokens,
+        source_event AS sourceEvent
+      FROM events
+      WHERE source = ? AND repo_path IS ?
+      ORDER BY created_at DESC, id DESC
+      LIMIT 200
+      `,
+    )
+    .all(source, repoPath ?? null);
+
+  return (rows as TimelineEventRow[]).reverse();
 }
