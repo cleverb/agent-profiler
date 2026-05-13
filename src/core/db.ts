@@ -32,6 +32,11 @@ type SqliteDatabase = {
   close(): void;
 };
 
+type ColumnMigration = {
+  name: string;
+  sql: string;
+};
+
 export function resolveWritableDbPath(dbPath: string): string {
   try {
     fs.mkdirSync(path.dirname(dbPath), { recursive: true });
@@ -72,30 +77,130 @@ export function applySchema(db: SqliteDatabase): void {
   const schemaSql = fs.readFileSync(SCHEMA_PATH, "utf8");
   db.exec(schemaSql);
   migrateEventsSchema(db);
+  migrateInteractionSpansSchema(db);
+}
+
+function migrateTableColumns(
+  db: SqliteDatabase,
+  tableName: "events" | "interaction_spans",
+  columnsToAdd: ColumnMigration[],
+): void {
+  const columns = db.prepare(`PRAGMA table_info(${tableName})`).all() as { name: string }[];
+  const names = new Set(columns.map((c) => c.name));
+
+  for (const column of columnsToAdd) {
+    if (!names.has(column.name)) {
+      db.exec(column.sql);
+      names.add(column.name);
+    }
+  }
 }
 
 function migrateEventsSchema(db: SqliteDatabase): void {
-  const columns = db.prepare(`PRAGMA table_info(events)`).all() as { name: string }[];
-  const names = new Set(columns.map((c) => c.name));
+  migrateTableColumns(db, "events", [
+    { name: "workspace_path", sql: `ALTER TABLE events ADD COLUMN workspace_path TEXT` },
+    {
+      name: "workspace_home_rel_path",
+      sql: `ALTER TABLE events ADD COLUMN workspace_home_rel_path TEXT`,
+    },
+    {
+      name: "workspace_display_path",
+      sql: `ALTER TABLE events ADD COLUMN workspace_display_path TEXT`,
+    },
+    { name: "git_repo_root", sql: `ALTER TABLE events ADD COLUMN git_repo_root TEXT` },
+    {
+      name: "git_repo_root_home_rel_path",
+      sql: `ALTER TABLE events ADD COLUMN git_repo_root_home_rel_path TEXT`,
+    },
+    {
+      name: "git_repo_root_display_path",
+      sql: `ALTER TABLE events ADD COLUMN git_repo_root_display_path TEXT`,
+    },
+    { name: "git_repo_name", sql: `ALTER TABLE events ADD COLUMN git_repo_name TEXT` },
+    { name: "git_branch", sql: `ALTER TABLE events ADD COLUMN git_branch TEXT` },
+    {
+      name: "interaction_kind",
+      sql: `ALTER TABLE events ADD COLUMN interaction_kind TEXT`,
+    },
+    { name: "correlation_id", sql: `ALTER TABLE events ADD COLUMN correlation_id TEXT` },
+    {
+      name: "tool_canonical_name",
+      sql: `ALTER TABLE events ADD COLUMN tool_canonical_name TEXT`,
+    },
+    { name: "mcp_server", sql: `ALTER TABLE events ADD COLUMN mcp_server TEXT` },
+    { name: "mcp_tool", sql: `ALTER TABLE events ADD COLUMN mcp_tool TEXT` },
+    {
+      name: "payload_byte_length",
+      sql: `ALTER TABLE events ADD COLUMN payload_byte_length INTEGER`,
+    },
+    {
+      name: "prompt_fingerprint",
+      sql: `ALTER TABLE events ADD COLUMN prompt_fingerprint TEXT`,
+    },
+  ]);
+}
 
-  const add = (sql: string, colName: string) => {
-    if (!names.has(colName)) {
-      db.exec(sql);
-      names.add(colName);
-    }
-  };
-
-  add(`ALTER TABLE events ADD COLUMN workspace_path TEXT`, "workspace_path");
-  add(`ALTER TABLE events ADD COLUMN git_repo_root TEXT`, "git_repo_root");
-  add(`ALTER TABLE events ADD COLUMN git_repo_name TEXT`, "git_repo_name");
-  add(`ALTER TABLE events ADD COLUMN git_branch TEXT`, "git_branch");
-  add(`ALTER TABLE events ADD COLUMN interaction_kind TEXT`, "interaction_kind");
-  add(`ALTER TABLE events ADD COLUMN correlation_id TEXT`, "correlation_id");
-  add(`ALTER TABLE events ADD COLUMN tool_canonical_name TEXT`, "tool_canonical_name");
-  add(`ALTER TABLE events ADD COLUMN mcp_server TEXT`, "mcp_server");
-  add(`ALTER TABLE events ADD COLUMN mcp_tool TEXT`, "mcp_tool");
-  add(`ALTER TABLE events ADD COLUMN payload_byte_length INTEGER`, "payload_byte_length");
-  add(`ALTER TABLE events ADD COLUMN prompt_fingerprint TEXT`, "prompt_fingerprint");
+function migrateInteractionSpansSchema(db: SqliteDatabase): void {
+  migrateTableColumns(db, "interaction_spans", [
+    { name: "turn_id", sql: `ALTER TABLE interaction_spans ADD COLUMN turn_id TEXT` },
+    {
+      name: "tool_canonical_name",
+      sql: `ALTER TABLE interaction_spans ADD COLUMN tool_canonical_name TEXT`,
+    },
+    { name: "mcp_server", sql: `ALTER TABLE interaction_spans ADD COLUMN mcp_server TEXT` },
+    { name: "mcp_tool", sql: `ALTER TABLE interaction_spans ADD COLUMN mcp_tool TEXT` },
+    {
+      name: "pre_event_id",
+      sql: `ALTER TABLE interaction_spans ADD COLUMN pre_event_id INTEGER`,
+    },
+    {
+      name: "post_event_id",
+      sql: `ALTER TABLE interaction_spans ADD COLUMN post_event_id INTEGER`,
+    },
+    {
+      name: "failure_event_id",
+      sql: `ALTER TABLE interaction_spans ADD COLUMN failure_event_id INTEGER`,
+    },
+    {
+      name: "arg_token_estimate",
+      sql: `ALTER TABLE interaction_spans ADD COLUMN arg_token_estimate INTEGER DEFAULT 0`,
+    },
+    {
+      name: "result_token_estimate",
+      sql: `ALTER TABLE interaction_spans ADD COLUMN result_token_estimate INTEGER DEFAULT 0`,
+    },
+    {
+      name: "workspace_path",
+      sql: `ALTER TABLE interaction_spans ADD COLUMN workspace_path TEXT`,
+    },
+    {
+      name: "workspace_home_rel_path",
+      sql: `ALTER TABLE interaction_spans ADD COLUMN workspace_home_rel_path TEXT`,
+    },
+    {
+      name: "workspace_display_path",
+      sql: `ALTER TABLE interaction_spans ADD COLUMN workspace_display_path TEXT`,
+    },
+    {
+      name: "git_repo_root",
+      sql: `ALTER TABLE interaction_spans ADD COLUMN git_repo_root TEXT`,
+    },
+    {
+      name: "git_repo_root_home_rel_path",
+      sql: `ALTER TABLE interaction_spans ADD COLUMN git_repo_root_home_rel_path TEXT`,
+    },
+    {
+      name: "git_repo_root_display_path",
+      sql: `ALTER TABLE interaction_spans ADD COLUMN git_repo_root_display_path TEXT`,
+    },
+    {
+      name: "git_repo_name",
+      sql: `ALTER TABLE interaction_spans ADD COLUMN git_repo_name TEXT`,
+    },
+    { name: "git_branch", sql: `ALTER TABLE interaction_spans ADD COLUMN git_branch TEXT` },
+    { name: "started_at", sql: `ALTER TABLE interaction_spans ADD COLUMN started_at TEXT` },
+    { name: "completed_at", sql: `ALTER TABLE interaction_spans ADD COLUMN completed_at TEXT` },
+  ]);
 
   db.exec(
     `CREATE INDEX IF NOT EXISTS idx_events_workspace ON events(workspace_path, created_at)`,
@@ -124,6 +229,9 @@ export function insertEvent(
   workspaceGit: WorkspaceGitMeta,
   derived: DerivedIngestFields,
 ): number {
+  // Keep raw payloads verbatim for forensics and stable hashes; path redaction is a
+  // separate privacy decision from the derived `~/...` metadata stored alongside them.
+  const rawPayloadJson = JSON.stringify(event.rawPayload);
   const stmt = db.prepare(`
     INSERT INTO events (
       created_at,
@@ -140,7 +248,11 @@ export function insertEvent(
       payload_hash,
       raw_payload,
       workspace_path,
+      workspace_home_rel_path,
+      workspace_display_path,
       git_repo_root,
+      git_repo_root_home_rel_path,
+      git_repo_root_display_path,
       git_repo_name,
       git_branch,
       interaction_kind,
@@ -151,7 +263,7 @@ export function insertEvent(
       payload_byte_length,
       prompt_fingerprint
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const info = stmt.run(
@@ -167,9 +279,13 @@ export function insertEvent(
     event.estimatedOutputTokens,
     event.estimatedTotalTokens,
     payloadHash,
-    JSON.stringify(event.rawPayload),
+    rawPayloadJson,
     workspaceGit.workspacePath,
+    workspaceGit.workspaceHomeRelPath,
+    workspaceGit.workspaceDisplayPath,
     workspaceGit.gitRepoRoot,
+    workspaceGit.gitRepoRootHomeRelPath,
+    workspaceGit.gitRepoRootDisplayPath,
     workspaceGit.gitRepoName,
     workspaceGit.gitBranch,
     derived.interactionKind,
@@ -231,10 +347,12 @@ export function mergeInteractionSpan(
         tool_canonical_name, mcp_server, mcp_tool,
         pre_event_id, post_event_id, failure_event_id,
         arg_token_estimate, result_token_estimate,
-        workspace_path, git_repo_root, git_repo_name, git_branch,
+        workspace_path, workspace_home_rel_path, workspace_display_path,
+        git_repo_root, git_repo_root_home_rel_path, git_repo_root_display_path,
+        git_repo_name, git_branch,
         started_at, completed_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     if (derived.toolPhase === "pre") {
       ins.run(
@@ -251,7 +369,11 @@ export function mergeInteractionSpan(
         argTok,
         0,
         workspaceGit.workspacePath,
+        workspaceGit.workspaceHomeRelPath,
+        workspaceGit.workspaceDisplayPath,
         workspaceGit.gitRepoRoot,
+        workspaceGit.gitRepoRootHomeRelPath,
+        workspaceGit.gitRepoRootDisplayPath,
         workspaceGit.gitRepoName,
         workspaceGit.gitBranch,
         now,
@@ -272,7 +394,11 @@ export function mergeInteractionSpan(
         0,
         resTok,
         workspaceGit.workspacePath,
+        workspaceGit.workspaceHomeRelPath,
+        workspaceGit.workspaceDisplayPath,
         workspaceGit.gitRepoRoot,
+        workspaceGit.gitRepoRootHomeRelPath,
+        workspaceGit.gitRepoRootDisplayPath,
         workspaceGit.gitRepoName,
         workspaceGit.gitBranch,
         null,
@@ -293,7 +419,11 @@ export function mergeInteractionSpan(
         0,
         resTok,
         workspaceGit.workspacePath,
+        workspaceGit.workspaceHomeRelPath,
+        workspaceGit.workspaceDisplayPath,
         workspaceGit.gitRepoRoot,
+        workspaceGit.gitRepoRootHomeRelPath,
+        workspaceGit.gitRepoRootDisplayPath,
         workspaceGit.gitRepoName,
         workspaceGit.gitBranch,
         null,
@@ -309,6 +439,14 @@ export function mergeInteractionSpan(
         pre_event_id = COALESCE(pre_event_id, ?),
         started_at = COALESCE(started_at, ?),
         arg_token_estimate = ?,
+        workspace_path = COALESCE(workspace_path, ?),
+        workspace_home_rel_path = COALESCE(workspace_home_rel_path, ?),
+        workspace_display_path = COALESCE(workspace_display_path, ?),
+        git_repo_root = COALESCE(git_repo_root, ?),
+        git_repo_root_home_rel_path = COALESCE(git_repo_root_home_rel_path, ?),
+        git_repo_root_display_path = COALESCE(git_repo_root_display_path, ?),
+        git_repo_name = COALESCE(git_repo_name, ?),
+        git_branch = COALESCE(git_branch, ?),
         tool_canonical_name = COALESCE(tool_canonical_name, ?),
         mcp_server = COALESCE(mcp_server, ?),
         mcp_tool = COALESCE(mcp_tool, ?),
@@ -318,6 +456,14 @@ export function mergeInteractionSpan(
       eventId,
       now,
       Math.max(existing.arg_token_estimate, argTok),
+      workspaceGit.workspacePath,
+      workspaceGit.workspaceHomeRelPath,
+      workspaceGit.workspaceDisplayPath,
+      workspaceGit.gitRepoRoot,
+      workspaceGit.gitRepoRootHomeRelPath,
+      workspaceGit.gitRepoRootDisplayPath,
+      workspaceGit.gitRepoName,
+      workspaceGit.gitBranch,
       toolName,
       mcpS,
       mcpT,
@@ -330,6 +476,14 @@ export function mergeInteractionSpan(
         post_event_id = COALESCE(post_event_id, ?),
         completed_at = COALESCE(completed_at, ?),
         result_token_estimate = ?,
+        workspace_path = COALESCE(workspace_path, ?),
+        workspace_home_rel_path = COALESCE(workspace_home_rel_path, ?),
+        workspace_display_path = COALESCE(workspace_display_path, ?),
+        git_repo_root = COALESCE(git_repo_root, ?),
+        git_repo_root_home_rel_path = COALESCE(git_repo_root_home_rel_path, ?),
+        git_repo_root_display_path = COALESCE(git_repo_root_display_path, ?),
+        git_repo_name = COALESCE(git_repo_name, ?),
+        git_branch = COALESCE(git_branch, ?),
         tool_canonical_name = COALESCE(tool_canonical_name, ?),
         mcp_server = COALESCE(mcp_server, ?),
         mcp_tool = COALESCE(mcp_tool, ?),
@@ -339,6 +493,14 @@ export function mergeInteractionSpan(
       eventId,
       now,
       Math.max(existing.result_token_estimate, resTok),
+      workspaceGit.workspacePath,
+      workspaceGit.workspaceHomeRelPath,
+      workspaceGit.workspaceDisplayPath,
+      workspaceGit.gitRepoRoot,
+      workspaceGit.gitRepoRootHomeRelPath,
+      workspaceGit.gitRepoRootDisplayPath,
+      workspaceGit.gitRepoName,
+      workspaceGit.gitBranch,
       toolName,
       mcpS,
       mcpT,
@@ -351,6 +513,14 @@ export function mergeInteractionSpan(
         failure_event_id = COALESCE(failure_event_id, ?),
         completed_at = COALESCE(completed_at, ?),
         result_token_estimate = ?,
+        workspace_path = COALESCE(workspace_path, ?),
+        workspace_home_rel_path = COALESCE(workspace_home_rel_path, ?),
+        workspace_display_path = COALESCE(workspace_display_path, ?),
+        git_repo_root = COALESCE(git_repo_root, ?),
+        git_repo_root_home_rel_path = COALESCE(git_repo_root_home_rel_path, ?),
+        git_repo_root_display_path = COALESCE(git_repo_root_display_path, ?),
+        git_repo_name = COALESCE(git_repo_name, ?),
+        git_branch = COALESCE(git_branch, ?),
         tool_canonical_name = COALESCE(tool_canonical_name, ?),
         mcp_server = COALESCE(mcp_server, ?),
         mcp_tool = COALESCE(mcp_tool, ?),
@@ -360,6 +530,14 @@ export function mergeInteractionSpan(
       eventId,
       now,
       Math.max(existing.result_token_estimate, resTok),
+      workspaceGit.workspacePath,
+      workspaceGit.workspaceHomeRelPath,
+      workspaceGit.workspaceDisplayPath,
+      workspaceGit.gitRepoRoot,
+      workspaceGit.gitRepoRootHomeRelPath,
+      workspaceGit.gitRepoRootDisplayPath,
+      workspaceGit.gitRepoName,
+      workspaceGit.gitBranch,
       toolName,
       mcpS,
       mcpT,
@@ -410,7 +588,11 @@ export type StoredEvent = {
   estimatedTotalTokens: number;
   rawPayload: string;
   workspacePath: string | null;
+  workspaceHomeRelPath: string | null;
+  workspaceDisplayPath: string | null;
   gitRepoRoot: string | null;
+  gitRepoRootHomeRelPath: string | null;
+  gitRepoRootDisplayPath: string | null;
   gitRepoName: string | null;
   gitBranch: string | null;
 };
@@ -448,7 +630,11 @@ export function getEventsForLatestSession(db: SqliteDatabase): StoredEvent[] {
             estimated_total_tokens AS estimatedTotalTokens,
             raw_payload AS rawPayload,
             workspace_path AS workspacePath,
+            workspace_home_rel_path AS workspaceHomeRelPath,
+            workspace_display_path AS workspaceDisplayPath,
             git_repo_root AS gitRepoRoot,
+            git_repo_root_home_rel_path AS gitRepoRootHomeRelPath,
+            git_repo_root_display_path AS gitRepoRootDisplayPath,
             git_repo_name AS gitRepoName,
             git_branch AS gitBranch
           FROM events
@@ -475,7 +661,11 @@ export function getEventsForLatestSession(db: SqliteDatabase): StoredEvent[] {
             estimated_total_tokens AS estimatedTotalTokens,
             raw_payload AS rawPayload,
             workspace_path AS workspacePath,
+            workspace_home_rel_path AS workspaceHomeRelPath,
+            workspace_display_path AS workspaceDisplayPath,
             git_repo_root AS gitRepoRoot,
+            git_repo_root_home_rel_path AS gitRepoRootHomeRelPath,
+            git_repo_root_display_path AS gitRepoRootDisplayPath,
             git_repo_name AS gitRepoName,
             git_branch AS gitBranch
           FROM events
