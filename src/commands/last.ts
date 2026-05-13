@@ -136,7 +136,8 @@ export function getLastReport(): LastReport | null {
       }
     }
     if (event.role === "tool_call") toolCalls += 1;
-    if (event.role === "tool_result") toolResults += event.estimatedTotalTokens;
+    if (event.role === "tool_result" || event.role === "tool_failure")
+      toolResults += event.estimatedTotalTokens;
   }
 
   let score = 100;

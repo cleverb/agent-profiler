@@ -36,7 +36,15 @@ type CodexHooksFile = { hooks?: Record<string, CodexHookGroup[]> };
 const CURSOR_EVENTS = [
   "beforeSubmitPrompt",
   "afterAgentResponse",
+  "afterAgentThought",
+  "preToolUse",
+  "postToolUse",
+  "postToolUseFailure",
+  "beforeMCPExecution",
+  "afterMCPExecution",
+  "beforeShellExecution",
   "afterShellExecution",
+  "beforeReadFile",
   "afterFileEdit",
   "stop",
 ] as const;

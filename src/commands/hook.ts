@@ -5,7 +5,16 @@ import {
   resolveHookWorkspacePath,
   resolveWorkspaceGitMeta,
 } from "../core/gitWorkspace.js";
-import { getDefaultDbPath, insertEvent, openDb } from "../core/db.js";
+import {
+  deriveIngestFields,
+  type TelemetryHookSource,
+} from "../core/eventMetadata.js";
+import {
+  getDefaultDbPath,
+  insertEvent,
+  mergeInteractionSpan,
+  openDb,
+} from "../core/db.js";
 import type { InitSource } from "./init.js";
 import type { NormalizedAgentEvent } from "../core/normalize.js";
 
@@ -78,7 +87,15 @@ export async function runHook(source: InitSource, eventName: string): Promise<vo
   try {
     const workspacePath = resolveHookWorkspacePath(normalized.repoPath, rawPayload);
     const workspaceGit = resolveWorkspaceGitMeta(workspacePath);
-    insertEvent(db, normalized, payloadHash, workspaceGit);
+    const derived = deriveIngestFields(
+      source as TelemetryHookSource,
+      eventName,
+      rawPayload,
+      stdinText,
+      normalized,
+    );
+    const eventId = insertEvent(db, normalized, payloadHash, workspaceGit, derived);
+    mergeInteractionSpan(db, eventId, normalized, workspaceGit, derived);
   } finally {
     db.close();
   }

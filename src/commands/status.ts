@@ -50,6 +50,11 @@ const REQUIRED_CURSOR_EVENTS = [
   "afterShellExecution",
   "afterFileEdit",
   "stop",
+  "preToolUse",
+  "postToolUse",
+  "postToolUseFailure",
+  "beforeMCPExecution",
+  "afterMCPExecution",
 ];
 
 const REQUIRED_CODEX_EVENTS = [

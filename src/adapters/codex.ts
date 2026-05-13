@@ -39,6 +39,7 @@ function estimateTokensForRole(role: AgentEventRole, text: string): {
   const estimatedOutputTokens =
     role === "assistant_output" ||
     role === "tool_result" ||
+    role === "tool_failure" ||
     role === "shell_output" ||
     role === "file_edit" ||
     role === "session_stop"

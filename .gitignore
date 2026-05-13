@@ -8,4 +8,8 @@ dist/
 *.sqlite-wal
 
 # Machine-specific Cursor hook wiring (paths from `init cursor`)
-.cursor/hooks.json
+.cursor/
+.codex/
+
+# Playwright artifacts
+.playwright-mcp/

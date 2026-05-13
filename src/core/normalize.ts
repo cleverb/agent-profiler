@@ -5,6 +5,7 @@ export type AgentEventRole =
   | "assistant_output"
   | "tool_call"
   | "tool_result"
+  | "tool_failure"
   | "shell_command"
   | "shell_output"
   | "file_edit"
