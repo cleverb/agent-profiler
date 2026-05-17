@@ -43,6 +43,28 @@ export const ToolHeavySession: Story = {
   },
 };
 
+/** Abbreviated category counts parsed from `usageRows` value strings. */
+export const AbbreviatedFromStrings: Story = {
+  args: {
+    subtitle: "Storybook · abbreviated category counts",
+    usageAbbreviated: true,
+  },
+};
+
+/** Numeric breakdown rows + abbreviated formatting (ceil-k ≥10k). */
+export const NumericBreakdownAbbreviated: Story = {
+  args: {
+    subtitle: "Storybook · numeric breakdown API",
+    usageAbbreviated: true,
+    usageBreakdownRows: [
+      { label: "Input", widthPct: 72, tokens: 41200, variant: "input" },
+      { label: "Output", widthPct: 55, tokens: 31800, variant: "output" },
+      { label: "Tool / MCP", widthPct: 38, tokens: 22100, variant: "tool" },
+      { label: "Shell", widthPct: 12, tokens: 6900, variant: "shell" },
+    ],
+  },
+};
+
 /** Fewer usage rows (edge-case density). */
 export const MinimalUsage: Story = {
   args: {

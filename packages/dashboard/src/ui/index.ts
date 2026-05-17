@@ -1,5 +1,32 @@
 export { escapeHtml } from "./shared/escapeHtml.js";
 export {
+  formatTokenCountAbbreviated,
+  formatTokenCountFull,
+} from "./shared/formatTokenCount.js";
+export {
+  dashboardButtonHtml,
+  type DashboardButtonProps,
+} from "./dashboard-button/dashboard-button.js";
+export {
+  dashboardCardHtml,
+  type DashboardCardProps,
+  type DashboardCardSpan,
+} from "./dashboard-card/dashboard-card.js";
+export {
+  usageTotalGaugeInnerHtml,
+  type UsageTotalGaugeProps,
+} from "./usage-total-gauge/usage-total-gauge.js";
+export {
+  efficiencyInnerHtml,
+  type EfficiencyInnerProps,
+} from "./efficiency-inner/efficiency-inner.js";
+export {
+  usageBreakdownBarsInnerHtml,
+  usageRowsToBreakdownInnerHtml,
+  type UsageBreakdownBarRow,
+  type UsageBreakdownBarsInnerProps,
+} from "./usage-breakdown/usage-breakdown-bars.js";
+export {
   overviewShellHtml,
   type OverviewShellProps,
   type UsageBarRow,

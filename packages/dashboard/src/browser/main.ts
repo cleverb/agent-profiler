@@ -37,11 +37,13 @@ function usageRowsFromUsage(usage: {
   input: number;
   output: number;
   toolResults: number;
+  toolLifecycleOutputs?: number;
   shellOutput: number;
 }): UsageBarRow[] {
+  const toolOutput = usage.toolLifecycleOutputs ?? usage.toolResults;
   const max = Math.max(
     1,
-    usage.input + usage.output + usage.toolResults + usage.shellOutput,
+    usage.input + usage.output + toolOutput + usage.shellOutput,
   );
   return [
     {
@@ -58,8 +60,8 @@ function usageRowsFromUsage(usage: {
     },
     {
       label: "Tool / MCP",
-      widthPct: (usage.toolResults / max) * 100,
-      valueText: fmt(usage.toolResults),
+      widthPct: (toolOutput / max) * 100,
+      valueText: fmt(toolOutput),
       variant: "tool",
     },
     {
@@ -77,6 +79,7 @@ function setUsageBars(
     input: number;
     output: number;
     toolResults: number;
+    toolLifecycleOutputs?: number;
     shellOutput: number;
   } | null,
 ) {
@@ -221,12 +224,23 @@ type Usage = {
   input: number;
   output: number;
   toolResults: number;
+  toolLifecycleOutputs?: number;
   shellOutput: number;
   total: number;
 };
 
+type Parity = {
+  lifecycle: {
+    toolRequests: number;
+    toolSuccesses: number;
+    toolFailures: number;
+  };
+  operations: Array<{ name: string; count: number; tokens: number }>;
+};
+
 type Report = {
   usage?: Usage | null;
+  parity?: Parity | null;
   efficiencyScore?: number;
   sessionShape: {
     turns: number;
@@ -314,6 +328,14 @@ async function refreshAll() {
         value: h.count,
       })),
     );
+    const parity = report?.parity?.lifecycle;
+    el("parity-line").textContent = parity
+      ? `Lifecycle parity: ${parity.toolRequests} requests, ${parity.toolSuccesses} successes, ${parity.toolFailures} failures`
+      : "";
+    const topOps = report?.parity?.operations?.slice(0, 3) ?? [];
+    el("operation-line").textContent = topOps.length
+      ? `Top operations: ${topOps.map((o) => `${o.name} ${fmt(o.tokens)}`).join(" · ")}`
+      : "";
 
     const audit = (await fetchJson("/api/context-audit")) as {
       files?: Array<{ path: string; estimatedTokens: number }>;

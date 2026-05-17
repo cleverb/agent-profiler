@@ -809,6 +809,8 @@ export type StoredEvent = {
   gitRepoRootDisplayPath: string | null;
   gitRepoName: string | null;
   gitBranch: string | null;
+  interactionKind: string | null;
+  toolCanonicalName: string | null;
 };
 
 export function getEventsForLatestSession(db: SqliteDatabase): StoredEvent[] {
@@ -877,7 +879,9 @@ const STORED_EVENT_SELECT = `
           git_repo_root_home_rel_path AS gitRepoRootHomeRelPath,
           git_repo_root_display_path AS gitRepoRootDisplayPath,
           git_repo_name AS gitRepoName,
-          git_branch AS gitBranch
+          git_branch AS gitBranch,
+          interaction_kind AS interactionKind,
+          tool_canonical_name AS toolCanonicalName
 `;
 
 export type LatestSessionDescriptor = {

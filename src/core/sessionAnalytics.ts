@@ -40,8 +40,21 @@ export type LastReport = {
     input: number;
     output: number;
     toolResults: number;
+    toolLifecycleOutputs: number;
     shellOutput: number;
     total: number;
+  };
+  parity: {
+    lifecycle: {
+      toolRequests: number;
+      toolSuccesses: number;
+      toolFailures: number;
+    };
+    operations: Array<{
+      name: string;
+      count: number;
+      tokens: number;
+    }>;
   };
   sessionShape: {
     turns: number;
@@ -62,6 +75,60 @@ export type LastReport = {
   }>;
   recommendations: string[];
 };
+
+type CanonicalOperation =
+  | "file_mutation"
+  | "shell_exec"
+  | "search_or_read"
+  | "mcp_call"
+  | "other_tool";
+
+function normalizeCommand(command: string): string {
+  return command.trim().toLowerCase();
+}
+
+function classifyOperation(event: StoredEvent): CanonicalOperation | null {
+  const payload = parsePayload(event.rawPayload);
+  const tool = (event.toolCanonicalName ?? "").toLowerCase();
+  const input = payload.tool_input as Record<string, unknown> | undefined;
+  const commandRaw =
+    typeof input?.command === "string" ? input.command : undefined;
+  const command = commandRaw ? normalizeCommand(commandRaw) : "";
+
+  if (
+    tool === "apply_patch" ||
+    tool === "write" ||
+    tool === "edit" ||
+    tool === "multiedit"
+  ) {
+    return "file_mutation";
+  }
+
+  if (tool === "bash" || tool === "shell") return "shell_exec";
+
+  if (tool === "grep" || tool === "readfile" || tool === "glob") {
+    return "search_or_read";
+  }
+
+  if (event.interactionKind?.startsWith("mcp_")) return "mcp_call";
+
+  if (command) {
+    if (
+      /(^|\s)(apply_patch|perl\s+-pi|sed\s+-i|ed\s|tee\s+.*>|mv\s|cp\s)/.test(
+        command,
+      )
+    ) {
+      return "file_mutation";
+    }
+    if (/(^|\s)(rg|grep|find|sed\s+-n|cat|head|tail|ls)\b/.test(command)) {
+      return "search_or_read";
+    }
+    return "shell_exec";
+  }
+
+  if (tool) return "other_tool";
+  return null;
+}
 
 export type AnalyzeSessionOptions = {
   /** Repo root used for context audit (always-on files). */
@@ -97,6 +164,10 @@ export function analyzeSession(
   let total = 0;
   let shellOutput = 0;
   let toolResults = 0;
+  let toolLifecycleOutputs = 0;
+  let toolRequests = 0;
+  let toolSuccesses = 0;
+  let toolFailures = 0;
 
   const turnIds = new Set<string>();
   let fileEdits = 0;
@@ -109,6 +180,10 @@ export function analyzeSession(
   const shellFailureBuckets = new Map<
     string,
     { runs: number; tokenTotal: number }
+  >();
+  const operationBuckets = new Map<
+    CanonicalOperation,
+    { count: number; tokens: number }
   >();
 
   for (const event of events) {
@@ -157,6 +232,30 @@ export function analyzeSession(
     if (event.role === "tool_call") toolCalls += 1;
     if (event.role === "tool_result" || event.role === "tool_failure")
       toolResults += event.estimatedTotalTokens;
+
+    const isPre = event.sourceEvent === "PreToolUse";
+    const isPost = event.sourceEvent === "PostToolUse";
+    const isFailure = event.sourceEvent === "PostToolUseFailure";
+    if (isPre) toolRequests += 1;
+    if (isPost) {
+      toolSuccesses += 1;
+      toolLifecycleOutputs += event.estimatedTotalTokens;
+    }
+    if (isFailure) {
+      toolFailures += 1;
+      toolLifecycleOutputs += event.estimatedTotalTokens;
+    }
+
+    if (isPre || isPost || isFailure) {
+      const op = classifyOperation(event);
+      if (op) {
+        const cur = operationBuckets.get(op) ?? { count: 0, tokens: 0 };
+        operationBuckets.set(op, {
+          count: cur.count + 1,
+          tokens: cur.tokens + event.estimatedTotalTokens,
+        });
+      }
+    }
   }
 
   let score = 100;
@@ -264,17 +363,47 @@ export function analyzeSession(
       estimatedTotalTokens: e.estimatedTotalTokens,
     }));
 
+  const operationLabels: Record<CanonicalOperation, string> = {
+    file_mutation: "file mutation",
+    shell_exec: "shell exec",
+    search_or_read: "search/read",
+    mcp_call: "mcp call",
+    other_tool: "other tool",
+  };
+  const operations = [...operationBuckets.entries()]
+    .map(([op, stats]) => ({
+      name: operationLabels[op],
+      count: stats.count,
+      tokens: stats.tokens,
+    }))
+    .sort((a, b) => b.tokens - a.tokens || b.count - a.count);
+
   return {
     source: first.source,
     sessionKey: sessionKeyLabel(first),
     repo: first.repoPath ?? options.contextAuditRoot,
     durationMinutes,
-    usage: { input, output, toolResults, shellOutput, total },
+    usage: {
+      input,
+      output,
+      toolResults,
+      toolLifecycleOutputs,
+      shellOutput,
+      total,
+    },
     sessionShape: {
       turns: turnIds.size,
       fileEdits,
       shellCalls,
       toolCalls,
+    },
+    parity: {
+      lifecycle: {
+        toolRequests,
+        toolSuccesses,
+        toolFailures,
+      },
+      operations,
     },
     largestEvents,
     efficiencyScore: score,

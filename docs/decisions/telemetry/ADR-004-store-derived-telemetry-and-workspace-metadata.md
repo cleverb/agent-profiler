@@ -60,3 +60,11 @@ Non-goals:
 ## More Information
 
 This decision is reflected in commits `32b5104` and `c1f8eb6`, which introduced derived ingest metadata, span correlation fields, additive schema migrations, and richer workspace/repository context on persisted records.
+
+## Implementation History
+
+- 2026-05-16: Added first-class `conversation_id` and `generation_id` storage on `events` and `interaction_spans` to preserve cross-source session and turn continuity.
+- 2026-05-16: Added ingest provenance fields `ingested_by_version` and `normalization_version` on `events` to support targeted remediation.
+- 2026-05-16: Added migration-tracking tables `schema_versions` and `data_fix_versions` for durable schema/data evolution workflows.
+- 2026-05-16: Added idempotent data-fix backfill `2026-05-16-cursor-id-and-event-backfill-v1` to repair historical Cursor IDs and canonicalize legacy event casing from `raw_payload`.
+- 2026-05-17: Updated dashboard analytics to rely on canonical lifecycle events (`PostToolUse`, `PostToolUseFailure`) for cross-source tool-output parity instead of role-only counting.

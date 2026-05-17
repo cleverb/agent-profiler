@@ -1,11 +1,17 @@
 /**
  * Parameterized HTML for the dashboard overview shell (Storybook / previews).
  */
+import { dashboardButtonHtml } from "../dashboard-button/dashboard-button.js";
+import { dashboardCardHtml } from "../dashboard-card/dashboard-card.js";
+import { efficiencyInnerHtml } from "../efficiency-inner/efficiency-inner.js";
 import { escapeHtml } from "../shared/escapeHtml.js";
+import { usageTotalGaugeInnerHtml } from "../usage-total-gauge/usage-total-gauge.js";
 import {
-  usageBarsInnerHtml,
-  type UsageBarRow,
-} from "../usage-bars/usage-bars.js";
+  usageBreakdownBarsInnerHtml,
+  usageRowsToBreakdownInnerHtml,
+  type UsageBreakdownBarRow,
+} from "../usage-breakdown/usage-breakdown-bars.js";
+import type { UsageBarRow } from "../usage-bars/usage-bars.js";
 
 export type { UsageBarRow, UsageBarVariant } from "../usage-bars/usage-bars.js";
 
@@ -17,6 +23,13 @@ export type OverviewShellProps = {
   totalTokensValue?: string;
   totalTokensCaption?: string;
   usageRows?: UsageBarRow[];
+  /**
+   * When set, drives horizontal breakdown from numeric tokens (Storybook-friendly).
+   * When omitted, `usageRows` string values are used instead.
+   */
+  usageBreakdownRows?: UsageBreakdownBarRow[];
+  /** Abbreviates category token counts (ceil-k ≥10k; one decimal 1k–9.999k). */
+  usageAbbreviated?: boolean;
   efficiencyScore?: string;
   /** SVG polyline `points` attribute */
   sparklinePoints?: string;
@@ -29,8 +42,15 @@ const defaultUsageRows: UsageBarRow[] = [
   { label: "Shell", widthPct: 12, valueText: "6,900", variant: "shell" },
 ];
 
-const defaultProps: Required<Omit<OverviewShellProps, "usageRows">> & {
+const defaultProps: Required<
+  Omit<
+    OverviewShellProps,
+    "usageRows" | "usageBreakdownRows" | "usageAbbreviated"
+  >
+> & {
   usageRows: UsageBarRow[];
+  usageBreakdownRows?: UsageBreakdownBarRow[];
+  usageAbbreviated: boolean;
 } = {
   title: "Agent Profiler Dashboard",
   subtitle: "Storybook preview · session mock",
@@ -41,6 +61,7 @@ const defaultProps: Required<Omit<OverviewShellProps, "usageRows">> & {
   usageRows: defaultUsageRows,
   efficiencyScore: "76",
   sparklinePoints: "0,40 40,28 80,34 120,12 160,22 200,8",
+  usageAbbreviated: false,
 };
 
 export function overviewShellHtml(props: OverviewShellProps = {}): string {
@@ -49,13 +70,50 @@ export function overviewShellHtml(props: OverviewShellProps = {}): string {
     ...props,
     usageRows: props.usageRows ?? defaultProps.usageRows,
     sessionOptions: props.sessionOptions ?? defaultProps.sessionOptions,
+    usageAbbreviated: props.usageAbbreviated ?? defaultProps.usageAbbreviated,
   };
 
   const sessionOptionsHtml = p.sessionOptions
     .map((opt) => `<option>${escapeHtml(opt)}</option>`)
     .join("\n          ");
 
-  const usageRowsHtml = usageBarsInnerHtml(p.usageRows);
+  const usageBarsHtml =
+    props.usageBreakdownRows !== undefined
+      ? usageBreakdownBarsInnerHtml({
+          rows: props.usageBreakdownRows,
+          isAbbreviated: p.usageAbbreviated,
+        })
+      : usageRowsToBreakdownInnerHtml(p.usageRows, {
+          isAbbreviated: p.usageAbbreviated,
+        });
+
+  const observableBody = `
+<div class="gauge-row">
+  ${usageTotalGaugeInnerHtml({
+    valueText: p.totalTokensValue,
+    caption: p.totalTokensCaption,
+  })}
+  <div class="bars">
+    ${usageBarsHtml}
+  </div>
+</div>`.trim();
+
+  const observableSection = dashboardCardHtml({
+    title: "Observable usage",
+    span: "2",
+    bodyHtml: observableBody,
+  });
+
+  const efficiencyBody = efficiencyInnerHtml({
+    scoreText: p.efficiencyScore,
+    sparklinePoints: p.sparklinePoints,
+    svgId: "score-sparkline",
+  });
+
+  const efficiencySection = dashboardCardHtml({
+    title: "Efficiency",
+    bodyHtml: efficiencyBody,
+  });
 
   return `
 <div class="layout">
@@ -71,40 +129,14 @@ export function overviewShellHtml(props: OverviewShellProps = {}): string {
           ${sessionOptionsHtml}
         </select>
       </label>
-      <button type="button">${escapeHtml(p.refreshLabel)}</button>
+      ${dashboardButtonHtml({ label: p.refreshLabel })}
     </div>
   </header>
 
   <main class="grid">
-    <section class="card span-2">
-      <h2>Observable usage</h2>
-      <div class="gauge-row">
-        <div class="gauge">
-          <span class="gauge-value">${escapeHtml(p.totalTokensValue)}</span>
-          <span class="muted small">${escapeHtml(p.totalTokensCaption)}</span>
-        </div>
-        <div class="bars">
-          ${usageRowsHtml}
-        </div>
-      </div>
-    </section>
+    ${observableSection}
 
-    <section class="card">
-      <h2>Efficiency</h2>
-      <div class="score-block">
-        <span class="score">${escapeHtml(p.efficiencyScore)}</span>
-        <span class="muted small">/ 100</span>
-      </div>
-      <div class="sparkline-wrap">
-        <svg
-          id="score-sparkline"
-          viewBox="0 0 200 48"
-          aria-hidden="true"
-        >
-          <polyline points="${escapeHtml(p.sparklinePoints)}" />
-        </svg>
-      </div>
-    </section>
+    ${efficiencySection}
   </main>
 </div>
 `.trim();

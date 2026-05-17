@@ -185,7 +185,11 @@ function toolHistogramFromEvents(
   events: StoredEvent[],
 ): { bucket: string; count: number }[] {
   const sizes = events
-    .filter((e) => e.role === "tool_result" || e.role === "tool_failure")
+    .filter(
+      (e) =>
+        e.sourceEvent === "PostToolUse" ||
+        e.sourceEvent === "PostToolUseFailure",
+    )
     .map((e) => e.estimatedTotalTokens);
   const buckets = [
     { label: "0–2k", min: 0, max: 2000 },

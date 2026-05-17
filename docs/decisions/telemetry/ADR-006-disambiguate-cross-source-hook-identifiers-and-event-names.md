@@ -57,3 +57,11 @@ Adopt a canonical hook identity model at ingest time while preserving raw payloa
 ## More Information
 
 This decision extends ADR-003 (source adapters) and ADR-004 (derived telemetry columns) by tightening canonical ID and event-name semantics based on observed production payloads.
+
+## Implementation History
+
+- 2026-05-16: Implemented canonical Cursor event mapping to PascalCase lifecycle names (`PreToolUse`, `PostToolUse`, `Stop`, etc.) while preserving raw payloads.
+- 2026-05-16: Updated Cursor ID normalization to read snake_case payload fields, including `session_id`, `generation_id`, and `conversation_id`, with `generation_id` fallback into canonical `turn_id`.
+- 2026-05-16: Added first-class persistence for `conversation_id` and `generation_id` on `events` and `interaction_spans`.
+- 2026-05-16: Added an idempotent historical data-fix backfill to repair older Cursor rows from `raw_payload` and re-canonicalize `source_event`.
+- 2026-05-16: Follow-on governance and operational practice were formalized in ADR-007 for additive migrations, row provenance, and tracked data-fix execution.
