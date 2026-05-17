@@ -1,0 +1,12 @@
+// Aggregated dashboard styles (compiled to `packages/dashboard/public/styles.css`).
+// Author partials alongside each UI component; keep import order aligned with cascade needs.
+
+@use "themes";
+@use "base";
+@use "../ui/overview-shell/overview-shell";
+@use "../ui/dashboard-card/dashboard-card";
+@use "../ui/usage-total-gauge/usage-total-gauge";
+@use "../ui/usage-bars/usage-bars";
+@use "../ui/histogram/histogram";
+@use "../ui/efficiency-inner/efficiency-inner";
+@use "../ui/timeline/timeline";

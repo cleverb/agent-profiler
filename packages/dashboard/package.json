@@ -3,12 +3,18 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "rollup -c"
+    "styles": "sass src/styles/dashboard.scss public/styles.css --no-source-map --style=expanded",
+    "styles:watch": "sass src/styles/dashboard.scss public/styles.css --watch --no-source-map --style=expanded",
+    "build": "npm run styles && rollup -c"
   },
   "devDependencies": {
     "@rollup/plugin-node-resolve": "^16.0.0",
     "@rollup/plugin-typescript": "^12.1.2",
     "rollup": "^4.40.0",
+    "sass": "^1.99.0",
     "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "chart.js": "^4.5.1"
   }
 }

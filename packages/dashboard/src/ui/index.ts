@@ -17,6 +17,13 @@ export {
   type UsageTotalGaugeProps,
 } from "./usage-total-gauge/usage-total-gauge.js";
 export {
+  attachUsageDialChart,
+  defaultUsageDialSegmentsFromUsage,
+  detachUsageDialChart,
+  detachUsageDialChartsIn,
+  type UsageDialChartSegmentInput,
+} from "./usage-total-gauge/usage-total-gauge-dial-chart.js";
+export {
   efficiencyInnerHtml,
   type EfficiencyInnerProps,
 } from "./efficiency-inner/efficiency-inner.js";

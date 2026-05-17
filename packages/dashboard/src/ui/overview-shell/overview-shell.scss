@@ -1,0 +1,91 @@
+/**
+ * Page chrome: layout shell, grids, observable row, static index.html lists.
+ * @see ADR-005
+ */
+
+.layout {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.session-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+
+  &>* {
+    min-width: 0;
+  }
+}
+
+// Bridge slots — children (e.g. generated `.card`) participate in `.grid` layout
+.slot-dashboard-grid {
+  display: contents;
+}
+
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .card.span-2,
+  .card.span-3 {
+    grid-column: span 1;
+  }
+}
+
+.gauge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  align-items: stretch;
+}
+
+.flag-list,
+.rec-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.9rem;
+}
+
+.flag-list {
+  li {
+    margin-bottom: 0.5rem;
+  }
+
+  .sev {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: var(--danger);
+    margin-right: 0.35rem;
+
+    &.medium {
+      color: var(--tool);
+    }
+  }
+}

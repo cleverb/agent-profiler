@@ -112,6 +112,38 @@ After editing:
 1. Run typecheck/build/tests relevant to scope
 2. Validate data/reporting parity if telemetry paths changed
 3. Record consequential decision history in ADRs
+4. When committing, draft messages per **Commit messages (commitlint)** below
+
+## Commit messages (commitlint)
+
+Treat **`commitlint.config.js`** as the source of truth. It extends **`@commitlint/config-conventional`** but tightens **`type-enum`** and requires **sentence-case** subjects (`subject-case`). Do **not** follow generic “conventional commits” examples that assume an all-lowercase subject or extra types (`build`, `ci`, `perf`, etc.) unless this config changes.
+
+**Allowed `<type>` values (only):**  
+`feat` · `fix` · `docs` · `refactor` · `style` · `test` · `revert` · `chore`
+
+**Header shape:** `<type>(<optional-scope>)?: <Subject in sentence-case>`
+
+- Prefer **sentence case** after the colon (e.g. `fix: Correct null guard in parser`, `feat: Mount overview shell via overviewShellHtml`).
+- Optional scope may be lowercase; keep the overall header within conventional length and style constraints from **`@commitlint/config-conventional`**.
+
+**Body (when using a multi-line message):**
+
+- Inherited from **`@commitlint/config-conventional`**: each body line must be **≤ 95 characters** (`body-max-line-length`).
+- Wrap long bullet lines; continuation lines may be indented (e.g. two spaces after the first line of a bullet).
+
+**Optional draft check before `git commit`:**
+
+```bash
+# Header only
+printf '%s\n' 'feat: Example subject for lint check' | npx commitlint
+
+# Full message (header + blank line + body)
+printf '%s\n' 'feat: Example subject
+
+- Short bullet that fits within one hundred characters per line.
+- Long bullet wrapped onto the next line with a leading space for
+  continuation.' | npx commitlint
+```
 
 ## Escalation Conditions
 

@@ -2,7 +2,7 @@
  * Section chrome for dashboard panels.
  * @see ADR-005
  */
-import { escapeHtml } from "../shared/escapeHtml.js";
+import { escapeHtml, classHelper } from "../shared";
 
 export type DashboardCardSpan = "2" | "3";
 
@@ -16,12 +16,12 @@ export type DashboardCardProps = {
 };
 
 export function dashboardCardHtml(props: DashboardCardProps): string {
-  const spanCls =
-    props.span === "2" ? " span-2" : props.span === "3" ? " span-3" : "";
-  const userCls = props.className?.trim() ?? "";
-  const sectionClass = userCls
-    ? `card${spanCls} ${userCls}`.trim()
-    : `card${spanCls}`.trim();
+  const spanNum = props.span === "2" ? 2 : props.span === "3" ? 3 : undefined;
+  const componentClass = classHelper(
+    "card",
+    props.className?.trim() ?? "",
+    spanNum,
+  );
 
   const heading =
     props.title != null && props.title !== ""
@@ -29,7 +29,7 @@ export function dashboardCardHtml(props: DashboardCardProps): string {
       : "";
 
   return `
-<section class="${escapeHtml(sectionClass)}">
+<section class="${escapeHtml(componentClass)}">
   ${heading}${props.bodyHtml}
 </section>
 `.trim();

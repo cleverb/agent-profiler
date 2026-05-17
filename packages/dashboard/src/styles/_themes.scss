@@ -1,0 +1,54 @@
+// Theme tokens consumed by `@agent-profiler/dashboard` UI.
+// Imported first from `dashboard.scss`.
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0f1117;
+  --surface: #181b24;
+  --border: #2a2f3d;
+  --text: #e8eaef;
+  --muted: #8b93a7;
+  --accent: #6c9fff;
+  --user: #3dd68c;
+  --assistant: #6c9fff;
+  --tool: #e8a23a;
+  --shell: #c678f0;
+  --other: #5c6370;
+  --danger: #f87171;
+  --track-bg: #252936;
+  --bar-output: #8ab4ff;
+  --btn-fg: #0f1117;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f4f5f8;
+  --surface: #ffffff;
+  --border: #d5dae6;
+  --text: #1a1d26;
+  --muted: #5c6478;
+  --accent: #2563eb;
+  --user: #059669;
+  --assistant: #2563eb;
+  --tool: #d97706;
+  --shell: #7c3aed;
+  --other: #64748b;
+  --danger: #dc2626;
+  --track-bg: #e2e6ef;
+  --bar-output: #60a5fa;
+  --btn-fg: #f8fafc;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+}

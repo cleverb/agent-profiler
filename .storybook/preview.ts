@@ -1,7 +1,7 @@
 import type { Preview } from "@storybook/html";
 
 import "@picocss/pico/css/pico.min.css";
-import "../packages/dashboard/public/styles.css";
+import "../packages/dashboard/src/styles/dashboard.scss";
 
 const preview: Preview = {
   globalTypes: {

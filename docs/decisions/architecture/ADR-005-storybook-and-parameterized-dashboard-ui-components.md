@@ -61,3 +61,7 @@ Non-goals:
 ## More Information
 
 Bundling uses the **`@agent-profiler/dashboard`** workspace (`npm run build` runs Rollup, then copies assets into `dist/dashboard/`). The **authoring and documentation** standard for dashboard UI is captured above.
+
+## Implementation History
+
+- **2026-05-16**: Dashboard presentation CSS is authored as **SCSS** partials **co-located** with UI modules under `packages/dashboard/src/ui/**`, with shared theme tokens + base resets in `packages/dashboard/src/styles/`. The dashboard workspace **`npm run build`** runs **`sass`** to emit **`packages/dashboard/public/styles.css`** (still linked from shipped `index.html`). Storybook preview imports **`src/styles/dashboard.scss`** so Vite compiles styles during docs development.

@@ -1,22 +1,46 @@
 import {
+  attachUsageDialChart,
   computeTimelineTrackSegments,
+  dashboardCardHtml,
+  defaultUsageDialSegmentsFromUsage,
+  detachUsageDialChartsIn,
+  efficiencyInnerHtml,
+  formatTokenCountFull,
+  overviewShellHtml,
   sparklinePolylinePoints,
   timelineTrackInnerHtml,
-  usageBarsInnerHtml,
+  usageBreakdownBarsInnerHtml,
+  usageTotalGaugeInnerHtml,
   verticalBarsInnerHtml,
-  type UsageBarRow,
+  type UsageBreakdownBarRow,
 } from "../ui/index.js";
+
+import { DASHBOARD_LOWER_MAIN_HTML } from "./dashboard-lower-main-html.js";
+
+/** Half-doughnut token dial backed by Chart.js (`usageTotalGauge` + `attachUsageDialChart`). */
+const USAGE_TOTAL_SHOW_DIAL_CHART = true;
 
 function fmt(n: number | null | undefined) {
   if (n == null || Number.isNaN(n)) return "—";
-  return new Intl.NumberFormat("en-US").format(Math.round(n));
+  return formatTokenCountFull(n);
 }
 
-function elSvg(id: string): SVGSVGElement {
-  const n = document.getElementById(id);
-  if (!n || !(n instanceof SVGSVGElement))
-    throw new Error(`missing or invalid svg #${id}`);
-  return n;
+/** Mount layout + lower sections from `overviewShellHtml` (ADR-005). */
+function mountDashboardShell() {
+  const root = document.getElementById("dashboard-mount");
+  if (!root) throw new Error("missing #dashboard-mount");
+  root.innerHTML = overviewShellHtml({
+    title: "Agent Profiler Dashboard",
+    subtitle: "",
+    sessionOptions: [],
+    refreshLabel: "Refresh",
+    refreshButtonId: "refresh-btn",
+    refreshButtonAriaLabel: "Refresh dashboard",
+    sessionSelectId: "session-select",
+    subtitleElementId: "meta-line",
+    useLiveOverviewSlots: true,
+    additionalMainInnerHtml: DASHBOARD_LOWER_MAIN_HTML,
+  });
 }
 
 function el(id: string): HTMLElement {
@@ -33,13 +57,13 @@ function encodeQuery(obj: Record<string, string | undefined>) {
   return p.toString();
 }
 
-function usageRowsFromUsage(usage: {
+function usageBreakdownRowsFromUsage(usage: {
   input: number;
   output: number;
   toolResults: number;
   toolLifecycleOutputs?: number;
   shellOutput: number;
-}): UsageBarRow[] {
+}): UsageBreakdownBarRow[] {
   const toolOutput = usage.toolLifecycleOutputs ?? usage.toolResults;
   const max = Math.max(
     1,
@@ -49,45 +73,106 @@ function usageRowsFromUsage(usage: {
     {
       label: "Input",
       widthPct: (usage.input / max) * 100,
-      valueText: fmt(usage.input),
+      tokens: usage.input,
       variant: "input",
     },
     {
       label: "Output",
       widthPct: (usage.output / max) * 100,
-      valueText: fmt(usage.output),
+      tokens: usage.output,
       variant: "output",
     },
     {
       label: "Tool / MCP",
       widthPct: (toolOutput / max) * 100,
-      valueText: fmt(toolOutput),
+      tokens: toolOutput,
       variant: "tool",
     },
     {
       label: "Shell",
       widthPct: (usage.shellOutput / max) * 100,
-      valueText: fmt(usage.shellOutput),
+      tokens: usage.shellOutput,
       variant: "shell",
     },
   ];
 }
 
-function setUsageBars(
-  container: HTMLElement,
-  usage: {
-    input: number;
-    output: number;
-    toolResults: number;
-    toolLifecycleOutputs?: number;
-    shellOutput: number;
-  } | null,
+/** Observable overview card — mirrors Storybook overview shell markup */
+function setOverviewObservableCard(
+  slot: HTMLElement,
+  totalTokens: number | null | undefined,
+  usage:
+    | {
+        input: number;
+        output: number;
+        toolResults: number;
+        toolLifecycleOutputs?: number;
+        shellOutput: number;
+        total: number;
+      }
+    | null
+    | undefined,
 ) {
   if (!usage) {
-    container.textContent = "No data.";
+    detachUsageDialChartsIn(slot);
+    slot.innerHTML = dashboardCardHtml({
+      title: "Observable usage",
+      span: "2",
+      bodyHtml: '<p class="muted small">No usage data.</p>',
+    });
     return;
   }
-  container.innerHTML = usageBarsInnerHtml(usageRowsFromUsage(usage));
+  const t =
+    totalTokens != null && !Number.isNaN(totalTokens)
+      ? fmt(totalTokens)
+      : fmt(usage.total);
+  const body = `
+<div class="gauge-row">
+  ${usageTotalGaugeInnerHtml({
+    valueText: t,
+    caption: "estimated total tokens",
+    valueElementId: "total-tokens",
+    showDialChart: USAGE_TOTAL_SHOW_DIAL_CHART,
+  })}
+  <div class="bars" id="usage-bars">${usageBreakdownBarsInnerHtml({
+    rows: usageBreakdownRowsFromUsage(usage),
+    isAbbreviated: true,
+  })}</div>
+</div>`.trim();
+
+  detachUsageDialChartsIn(slot);
+  slot.innerHTML = dashboardCardHtml({
+    title: "Observable usage",
+    span: "2",
+    bodyHtml: body,
+  });
+
+  if (USAGE_TOTAL_SHOW_DIAL_CHART) {
+    const canvas = slot.querySelector('canvas[data-gauge-dial="1"]');
+    if (canvas instanceof HTMLCanvasElement) {
+      attachUsageDialChart(canvas, defaultUsageDialSegmentsFromUsage(usage));
+    }
+  }
+}
+
+function setOverviewEfficiencyCard(
+  slot: HTMLElement,
+  efficiencyScore: number | null | undefined,
+  sparkPts: string,
+) {
+  const scoreText =
+    efficiencyScore != null && !Number.isNaN(Number(efficiencyScore))
+      ? String(efficiencyScore)
+      : "—";
+  const inner = efficiencyInnerHtml({
+    scoreText,
+    sparklinePoints: sparkPts,
+    svgId: "score-sparkline",
+  });
+  slot.innerHTML = dashboardCardHtml({
+    title: "Efficiency",
+    bodyHtml: inner,
+  });
 }
 
 function setVerticalBars(
@@ -124,26 +209,13 @@ function setTimelineTrack(
   container.innerHTML = timelineTrackInnerHtml(segs);
 }
 
-function renderSparkline(
-  svg: SVGSVGElement,
-  points: Array<{ efficiencyScore: number }>,
-) {
-  svg.replaceChildren();
-  const pts = sparklinePolylinePoints(points);
-  if (!pts) return;
-  const poly = document.createElementNS(
-    "http://www.w3.org/2000/svg",
-    "polyline",
-  );
-  poly.setAttribute("points", pts);
-  svg.appendChild(poly);
-}
-
 async function fetchJson(path: string) {
   const res = await fetch(path);
   if (!res.ok) throw new Error(`${path} ${res.status}`);
   return res.json() as Promise<Record<string, unknown>>;
 }
+
+mountDashboardShell();
 
 let selectedSessionKey = "";
 
@@ -306,15 +378,11 @@ async function refreshAll() {
       }
     }
 
-    el("total-tokens").textContent =
-      report && report.usage ? fmt(report.usage.total) : "—";
-
-    setUsageBars(el("usage-bars"), report?.usage ?? null);
-
-    el("efficiency-score").textContent =
-      report != null && report.efficiencyScore != null
-        ? String(report.efficiencyScore)
-        : "—";
+    setOverviewObservableCard(
+      el("slot-overview-usage"),
+      report?.usage?.total ?? null,
+      report?.usage ?? null,
+    );
 
     const histData = timelineQs
       ? ((await fetchJson(`/api/tool-histogram?${histQs}`)) as {
@@ -363,7 +431,12 @@ async function refreshAll() {
     const scores = (await fetchJson("/api/score-history?limit=15")) as {
       points?: Array<{ efficiencyScore: number }>;
     };
-    renderSparkline(elSvg("score-sparkline"), scores.points ?? []);
+    const sparkPts = sparklinePolylinePoints(scores.points ?? []) ?? "";
+    setOverviewEfficiencyCard(
+      el("slot-overview-efficiency"),
+      report?.efficiencyScore,
+      sparkPts,
+    );
 
     const flagsUl = el("red-flags");
     flagsUl.replaceChildren();

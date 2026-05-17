@@ -1,6 +1,25 @@
 import type { Meta, StoryObj } from "@storybook/html";
 
+import {
+  attachUsageDialChart,
+  defaultUsageDialSegmentsFromUsage,
+} from "../usage-total-gauge/usage-total-gauge-dial-chart.js";
 import { overviewShellHtml, type OverviewShellProps } from "./index.js";
+
+function renderOverviewHtml(args: OverviewShellProps): HTMLElement {
+  const wrap = document.createElement("div");
+  wrap.innerHTML = overviewShellHtml(args);
+  const canvas = wrap.querySelector('canvas[data-gauge-dial="1"]');
+  if (
+    canvas instanceof HTMLCanvasElement &&
+    args.showDialChart === true &&
+    args.usageDialSegments != null &&
+    args.usageDialSegments.length > 0
+  ) {
+    attachUsageDialChart(canvas, args.usageDialSegments);
+  }
+  return wrap;
+}
 
 const meta = {
   title: "Dashboard/OverviewShell",
@@ -8,7 +27,7 @@ const meta = {
   parameters: {
     layout: "fullscreen",
   },
-  render: (args: OverviewShellProps) => overviewShellHtml(args),
+  render: renderOverviewHtml,
 } satisfies Meta<OverviewShellProps>;
 
 export default meta;
@@ -73,5 +92,22 @@ export const MinimalUsage: Story = {
       { label: "Input", widthPct: 60, valueText: "100", variant: "input" },
       { label: "Output", widthPct: 40, valueText: "80", variant: "output" },
     ],
+  },
+};
+
+/** Half-doughnut token dial (Chart.js) over centered caption + total. */
+export const WithTokenDialGauge: Story = {
+  args: {
+    subtitle: "Storybook · Chart.js gauge dial enabled",
+    usageAbbreviated: true,
+    totalTokensValue: "1,350,000",
+    totalTokensCaption: "Total Estimated Tokens:",
+    showDialChart: true,
+    usageDialSegments: defaultUsageDialSegmentsFromUsage({
+      input: 540_000,
+      output: 337_500,
+      toolResults: 270_000,
+      shellOutput: 202_500,
+    }),
   },
 };

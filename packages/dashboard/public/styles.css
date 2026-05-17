@@ -1,4 +1,4 @@
-html[data-theme="dark"] {
+html[data-theme=dark] {
   color-scheme: dark;
   --bg: #0f1117;
   --surface: #181b24;
@@ -15,16 +15,10 @@ html[data-theme="dark"] {
   --track-bg: #252936;
   --bar-output: #8ab4ff;
   --btn-fg: #0f1117;
-  font-family:
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    "Segoe UI",
-    Roboto,
-    sans-serif;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
-html[data-theme="light"] {
+html[data-theme=light] {
   color-scheme: light;
   --bg: #f4f5f8;
   --surface: #ffffff;
@@ -41,13 +35,7 @@ html[data-theme="light"] {
   --track-bg: #e2e6ef;
   --bar-output: #60a5fa;
   --btn-fg: #f8fafc;
-  font-family:
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    "Segoe UI",
-    Roboto,
-    sans-serif;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
 * {
@@ -59,21 +47,6 @@ body {
   background: var(--bg);
   color: var(--text);
   line-height: 1.5;
-}
-
-.layout {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 1.5rem;
-}
-
-.header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
 }
 
 h1 {
@@ -99,20 +72,6 @@ h2 {
   font-size: 0.8rem;
 }
 
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.session-label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.75rem;
-  color: var(--muted);
-}
-
 select {
   background: var(--surface);
   color: var(--text);
@@ -131,9 +90,41 @@ button {
   font-weight: 600;
   cursor: pointer;
 }
-
 button:hover {
   filter: brightness(1.08);
+}
+
+/**
+ * Page chrome: layout shell, grids, observable row, static index.html lists.
+ * @see ADR-005
+ */
+.layout {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.session-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: var(--muted);
 }
 
 .grid {
@@ -141,23 +132,61 @@ button:hover {
   grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
 }
+.grid > * {
+  min-width: 0;
+}
+
+.slot-dashboard-grid {
+  display: contents;
+}
 
 @media (max-width: 900px) {
   .grid {
     grid-template-columns: 1fr;
   }
-
-  .span-2,
-  .span-3 {
+  .card.span-2,
+  .card.span-3 {
     grid-column: span 1;
   }
 }
+.gauge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  align-items: stretch;
+}
 
+.flag-list,
+.rec-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.9rem;
+}
+
+.flag-list li {
+  margin-bottom: 0.5rem;
+}
+.flag-list .sev {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--danger);
+  margin-right: 0.35rem;
+}
+.flag-list .sev.medium {
+  color: var(--tool);
+}
+
+/**
+ * Section panels produced by `dashboardCardHtml`.
+ * @see ADR-005
+ */
 .card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 1rem 1.1rem;
+  min-width: 180px;
 }
 
 .span-2 {
@@ -168,18 +197,72 @@ button:hover {
   grid-column: span 3;
 }
 
-.gauge-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.25rem;
-  align-items: stretch;
-}
-
+/**
+ * Observable usage gauge + Chart.js dial slot.
+ * @see ADR-005
+ */
 .gauge {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  min-width: 140px;
+  min-width: 12rem;
+}
+@media (max-width: 462px) {
+  .gauge {
+    width: 100%;
+    min-width: 8rem;
+  }
+}
+.gauge.gauge--with-dial .gauge-value {
+  font-size: clamp(1.15rem, 2.8vw, 1rem);
+  line-height: 1.1;
+  margin-bottom: -0.2rem;
+}
+.gauge.gauge--with-dial .gauge-value-label {
+  font-size: clamp(65%, 0.4vw, 0.4rem);
+  font-weight: 600;
+}
+.gauge.gauge--with-dial .muted.small {
+  max-width: 14rem;
+  line-height: 1.35;
+}
+
+.gauge-dial-slot {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  width: min(240px, 100%);
+  pointer-events: none;
+  margin: 0 auto;
+}
+@media (max-width: 462px) {
+  .gauge-dial-slot {
+    position: relative;
+    left: initial;
+    top: initial;
+    transform: none;
+  }
+}
+.gauge-dial-slot canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.gauge-center-copy {
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.2rem;
+  margin-top: 0;
+  padding: 0 0.4rem;
+  bottom: 0;
+  width: 100%;
 }
 
 .gauge-value {
@@ -188,24 +271,16 @@ button:hover {
   font-variant-numeric: tabular-nums;
 }
 
+/**
+ * Horizontal usage breakdown rows (`usageBarsInnerHtml`).
+ * @see ADR-005
+ */
 .bars {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
-  min-width: 200px;
-}
-
-.bars.vertical {
-  flex-direction: row;
-  align-items: flex-end;
-  gap: 0.5rem;
-  min-height: 120px;
-}
-
-.bars.vertical.tall {
-  min-height: 180px;
-  flex-wrap: wrap;
+  min-width: 165px;
 }
 
 .bar-row {
@@ -214,11 +289,19 @@ button:hover {
   gap: 0.5rem;
   font-size: 0.8rem;
 }
-
 .bar-row span:first-child {
   width: 5.5rem;
+  min-width: 0;
   color: var(--muted);
-  flex-shrink: 0;
+  flex: 0 1 auto;
+}
+@media (max-width: 256px) {
+  .bar-row span:first-child {
+    width: auto;
+    min-width: 0;
+    padding-right: 0;
+    flex: 1 1 35%;
+  }
 }
 
 .bar-track {
@@ -228,27 +311,43 @@ button:hover {
   border-radius: 5px;
   overflow: hidden;
 }
+@media (max-width: 256px) {
+  .bar-track {
+    flex: 0 1 65%;
+  }
+}
 
 .bar-fill {
   height: 100%;
   border-radius: 5px;
   transition: width 0.2s ease;
 }
-
 .bar-fill.input {
   background: var(--assistant);
 }
-
 .bar-fill.output {
   background: var(--bar-output);
 }
-
 .bar-fill.tool {
   background: var(--tool);
 }
-
 .bar-fill.shell {
   background: var(--shell);
+}
+
+/**
+ * Vertical tool/context histogram bars (`verticalBarsInnerHtml`).
+ * Modifiers on `.bars` from histogram markup.
+ */
+.bars.vertical {
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 0.5rem;
+  min-height: 120px;
+}
+.bars.vertical.tall {
+  min-height: 180px;
+  flex-wrap: wrap;
 }
 
 .vbar-col {
@@ -288,6 +387,10 @@ button:hover {
   overflow: hidden;
 }
 
+/**
+ * Efficiency score + sparkline inner fragment.
+ * @see ADR-005
+ */
 .score-block {
   display: flex;
   align-items: baseline;
@@ -303,14 +406,12 @@ button:hover {
 .sparkline-wrap {
   margin-top: 0.75rem;
 }
-
-#score-sparkline {
+.sparkline-wrap svg {
   width: 100%;
   max-width: 240px;
   height: 48px;
 }
-
-#score-sparkline polyline {
+.sparkline-wrap polyline {
   fill: none;
   stroke: var(--accent);
   stroke-width: 2;
@@ -318,6 +419,9 @@ button:hover {
   stroke-linejoin: round;
 }
 
+/**
+ * Session timeline track + legend.
+ */
 .timeline-meta {
   margin-bottom: 0.5rem;
 }
@@ -335,23 +439,18 @@ button:hover {
   min-width: 2px;
   flex-shrink: 0;
 }
-
 .timeline-seg.user {
   background: var(--user);
 }
-
 .timeline-seg.assistant {
   background: var(--assistant);
 }
-
 .timeline-seg.tool {
   background: var(--tool);
 }
-
 .timeline-seg.shell {
   background: var(--shell);
 }
-
 .timeline-seg.other {
   background: var(--other);
 }
@@ -364,7 +463,6 @@ button:hover {
   font-size: 0.75rem;
   color: var(--muted);
 }
-
 .timeline-legend .dot {
   display: inline-block;
   width: 8px;
@@ -373,46 +471,18 @@ button:hover {
   margin-right: 0.25rem;
   vertical-align: middle;
 }
-
-.dot.user {
+.timeline-legend .dot.user {
   background: var(--user);
 }
-
-.dot.assistant {
+.timeline-legend .dot.assistant {
   background: var(--assistant);
 }
-
-.dot.tool {
+.timeline-legend .dot.tool {
   background: var(--tool);
 }
-
-.dot.shell {
+.timeline-legend .dot.shell {
   background: var(--shell);
 }
-
-.dot.other {
+.timeline-legend .dot.other {
   background: var(--other);
-}
-
-.flag-list,
-.rec-list {
-  margin: 0;
-  padding-left: 1.1rem;
-  font-size: 0.9rem;
-}
-
-.flag-list li {
-  margin-bottom: 0.5rem;
-}
-
-.flag-list .sev {
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: var(--danger);
-  margin-right: 0.35rem;
-}
-
-.flag-list .sev.medium {
-  color: var(--tool);
 }

@@ -8,7 +8,7 @@ export type EfficiencyInnerProps = {
   scoreText: string;
   /** SVG polyline `points` attribute */
   sparklinePoints: string;
-  /** Matches shipped dashboard `#score-sparkline` when set */
+  /** Optional DOM id for the SVG (dashboard uses `score-sparkline`; styles use `.sparkline-wrap`). */
   svgId?: string;
 };
 
@@ -27,7 +27,7 @@ export function efficiencyInnerHtml(props: EfficiencyInnerProps): string {
     viewBox="0 0 200 48"
     aria-hidden="true"
   >
-    <polyline points="${escapeHtml(props.sparklinePoints)}" />
+    <polyline fill="none" points="${escapeHtml(props.sparklinePoints)}" />
   </svg>
 </div>
 `.trim();
