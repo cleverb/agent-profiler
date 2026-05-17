@@ -24,6 +24,26 @@ const cursorRoleMap: Record<string, AgentEventRole> = {
   preCompact: "unknown",
 };
 
+const cursorCanonicalEventMap: Record<string, string> = {
+  start: "SessionStart",
+  sessionStart: "SessionStart",
+  beforeSubmitPrompt: "UserPromptSubmit",
+  preToolUse: "PreToolUse",
+  postToolUse: "PostToolUse",
+  postToolUseFailure: "PostToolUseFailure",
+  beforeMCPExecution: "PreToolUse",
+  afterMCPExecution: "PostToolUse",
+  beforeShellExecution: "BeforeShellExecution",
+  afterShellExecution: "AfterShellExecution",
+  beforeReadFile: "BeforeReadFile",
+  afterFileEdit: "AfterFileEdit",
+  afterAgentThought: "AfterAgentThought",
+  afterAgentResponse: "AfterAgentResponse",
+  stop: "Stop",
+  sessionEnd: "Stop",
+  preCompact: "PreCompact",
+};
+
 function pickFirstString(values: unknown[]): string | undefined {
   for (const value of values) {
     if (typeof value === "string" && value.trim().length > 0) {
@@ -107,10 +127,28 @@ export function normalizeCursorEvent(
 
   return {
     source: "cursor",
-    sourceEvent: eventName,
+    sourceEvent: cursorCanonicalEventMap[eventName] ?? eventName,
     repoPath: pickFirstString([payload.repoPath, payload.workspacePath]),
-    sessionId: pickFirstString([payload.sessionId, payload.session]),
-    turnId: pickFirstString([payload.turnId, payload.turn]),
+    sessionId: pickFirstString([
+      payload.session_id,
+      payload.sessionId,
+      payload.session,
+    ]),
+    turnId: pickFirstString([
+      payload.turn_id,
+      payload.turnId,
+      payload.turn,
+      payload.generation_id,
+      payload.generationId,
+    ]),
+    conversationId: pickFirstString([
+      payload.conversation_id,
+      payload.conversationId,
+    ]),
+    generationId: pickFirstString([
+      payload.generation_id,
+      payload.generationId,
+    ]),
     model: pickFirstString([payload.model, payload.modelName]),
     role,
     observableText,

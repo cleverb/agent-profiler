@@ -40,6 +40,11 @@ type ColumnMigration = {
   sql: string;
 };
 
+type IngestProvenance = {
+  ingestedByVersion: string;
+  normalizationVersion: number;
+};
+
 export function resolveWritableDbPath(dbPath: string): string {
   try {
     fs.mkdirSync(path.dirname(dbPath), { recursive: true });
@@ -81,6 +86,7 @@ export function applySchema(db: SqliteDatabase): void {
   db.exec(schemaSql);
   migrateEventsSchema(db);
   migrateInteractionSpansSchema(db);
+  applyDataFidelityFixes(db);
 }
 
 function migrateTableColumns(
@@ -160,6 +166,22 @@ function migrateEventsSchema(db: SqliteDatabase): void {
       name: "prompt_fingerprint",
       sql: `ALTER TABLE events ADD COLUMN prompt_fingerprint TEXT`,
     },
+    {
+      name: "conversation_id",
+      sql: `ALTER TABLE events ADD COLUMN conversation_id TEXT`,
+    },
+    {
+      name: "generation_id",
+      sql: `ALTER TABLE events ADD COLUMN generation_id TEXT`,
+    },
+    {
+      name: "ingested_by_version",
+      sql: `ALTER TABLE events ADD COLUMN ingested_by_version TEXT`,
+    },
+    {
+      name: "normalization_version",
+      sql: `ALTER TABLE events ADD COLUMN normalization_version INTEGER`,
+    },
   ]);
 }
 
@@ -168,6 +190,14 @@ function migrateInteractionSpansSchema(db: SqliteDatabase): void {
     {
       name: "turn_id",
       sql: `ALTER TABLE interaction_spans ADD COLUMN turn_id TEXT`,
+    },
+    {
+      name: "conversation_id",
+      sql: `ALTER TABLE interaction_spans ADD COLUMN conversation_id TEXT`,
+    },
+    {
+      name: "generation_id",
+      sql: `ALTER TABLE interaction_spans ADD COLUMN generation_id TEXT`,
     },
     {
       name: "tool_canonical_name",
@@ -269,6 +299,7 @@ export function insertEvent(
   payloadHash: string,
   workspaceGit: WorkspaceGitMeta,
   derived: DerivedIngestFields,
+  provenance: IngestProvenance,
 ): number {
   // Keep raw payloads verbatim for forensics and stable hashes; path redaction is a
   // separate privacy decision from the derived `~/...` metadata stored alongside them.
@@ -281,6 +312,10 @@ export function insertEvent(
       repo_path,
       session_id,
       turn_id,
+      conversation_id,
+      generation_id,
+      ingested_by_version,
+      normalization_version,
       model,
       role,
       estimated_input_tokens,
@@ -304,7 +339,7 @@ export function insertEvent(
       payload_byte_length,
       prompt_fingerprint
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const info = stmt.run(
@@ -314,6 +349,10 @@ export function insertEvent(
     event.repoPath ?? null,
     event.sessionId ?? null,
     event.turnId ?? null,
+    event.conversationId ?? null,
+    event.generationId ?? null,
+    provenance.ingestedByVersion,
+    provenance.normalizationVersion,
     event.model ?? null,
     event.role,
     event.estimatedInputTokens,
@@ -339,6 +378,119 @@ export function insertEvent(
   ) as { lastInsertRowid: number | bigint };
 
   return Number(info.lastInsertRowid);
+}
+
+function hasDataFix(db: SqliteDatabase, name: string): boolean {
+  const row = db
+    .prepare(`SELECT 1 AS ok FROM data_fix_versions WHERE name = ? LIMIT 1`)
+    .get(name) as { ok: number } | undefined;
+  return Boolean(row?.ok);
+}
+
+function recordDataFix(db: SqliteDatabase, name: string): void {
+  db.prepare(
+    `INSERT INTO data_fix_versions (name, applied_at) VALUES (?, ?)`,
+  ).run(name, new Date().toISOString());
+}
+
+function applyDataFidelityFixes(db: SqliteDatabase): void {
+  const fixName = "2026-05-16-cursor-id-and-event-backfill-v1";
+  if (hasDataFix(db, fixName)) return;
+
+  db.exec(`
+    UPDATE events
+    SET
+      session_id = COALESCE(
+        NULLIF(TRIM(session_id), ''),
+        NULLIF(TRIM(json_extract(raw_payload, '$.session_id')), ''),
+        NULLIF(TRIM(json_extract(raw_payload, '$.sessionId')), '')
+      ),
+      turn_id = COALESCE(
+        NULLIF(TRIM(turn_id), ''),
+        NULLIF(TRIM(json_extract(raw_payload, '$.turn_id')), ''),
+        NULLIF(TRIM(json_extract(raw_payload, '$.turnId')), ''),
+        NULLIF(TRIM(json_extract(raw_payload, '$.generation_id')), ''),
+        NULLIF(TRIM(json_extract(raw_payload, '$.generationId')), '')
+      ),
+      conversation_id = COALESCE(
+        NULLIF(TRIM(conversation_id), ''),
+        NULLIF(TRIM(json_extract(raw_payload, '$.conversation_id')), ''),
+        NULLIF(TRIM(json_extract(raw_payload, '$.conversationId')), '')
+      ),
+      generation_id = COALESCE(
+        NULLIF(TRIM(generation_id), ''),
+        NULLIF(TRIM(json_extract(raw_payload, '$.generation_id')), ''),
+        NULLIF(TRIM(json_extract(raw_payload, '$.generationId')), '')
+      ),
+      source_event = CASE source_event
+        WHEN 'start' THEN 'SessionStart'
+        WHEN 'sessionStart' THEN 'SessionStart'
+        WHEN 'beforeSubmitPrompt' THEN 'UserPromptSubmit'
+        WHEN 'preToolUse' THEN 'PreToolUse'
+        WHEN 'postToolUse' THEN 'PostToolUse'
+        WHEN 'postToolUseFailure' THEN 'PostToolUseFailure'
+        WHEN 'beforeMCPExecution' THEN 'PreToolUse'
+        WHEN 'afterMCPExecution' THEN 'PostToolUse'
+        WHEN 'beforeShellExecution' THEN 'BeforeShellExecution'
+        WHEN 'afterShellExecution' THEN 'AfterShellExecution'
+        WHEN 'beforeReadFile' THEN 'BeforeReadFile'
+        WHEN 'afterFileEdit' THEN 'AfterFileEdit'
+        WHEN 'afterAgentThought' THEN 'AfterAgentThought'
+        WHEN 'afterAgentResponse' THEN 'AfterAgentResponse'
+        WHEN 'stop' THEN 'Stop'
+        WHEN 'sessionEnd' THEN 'Stop'
+        WHEN 'preCompact' THEN 'PreCompact'
+        ELSE source_event
+      END
+    WHERE source = 'cursor'
+  `);
+
+  db.exec(`
+    UPDATE events
+    SET interaction_kind = CASE source_event
+      WHEN 'SessionStart' THEN 'session_start'
+      WHEN 'UserPromptSubmit' THEN 'user_prompt_submit'
+      WHEN 'PreToolUse' THEN 'tool_request'
+      WHEN 'PostToolUse' THEN 'tool_result_event'
+      WHEN 'PostToolUseFailure' THEN 'tool_failure_event'
+      WHEN 'BeforeShellExecution' THEN 'shell_command_request'
+      WHEN 'AfterShellExecution' THEN 'shell_output'
+      WHEN 'BeforeReadFile' THEN 'file_read_request'
+      WHEN 'AfterFileEdit' THEN 'file_edit'
+      WHEN 'AfterAgentResponse' THEN 'model_output'
+      WHEN 'AfterAgentThought' THEN 'model_thought'
+      WHEN 'PreCompact' THEN 'context_compact'
+      WHEN 'Stop' THEN 'session_stop'
+      ELSE interaction_kind
+    END
+    WHERE source = 'cursor'
+  `);
+
+  db.exec(`
+    UPDATE interaction_spans
+    SET
+      turn_id = COALESCE(
+        NULLIF(TRIM(turn_id), ''),
+        NULLIF(TRIM((SELECT e.turn_id FROM events e WHERE e.id = pre_event_id)), ''),
+        NULLIF(TRIM((SELECT e.turn_id FROM events e WHERE e.id = post_event_id)), ''),
+        NULLIF(TRIM((SELECT e.turn_id FROM events e WHERE e.id = failure_event_id)), '')
+      ),
+      conversation_id = COALESCE(
+        NULLIF(TRIM(conversation_id), ''),
+        NULLIF(TRIM((SELECT e.conversation_id FROM events e WHERE e.id = pre_event_id)), ''),
+        NULLIF(TRIM((SELECT e.conversation_id FROM events e WHERE e.id = post_event_id)), ''),
+        NULLIF(TRIM((SELECT e.conversation_id FROM events e WHERE e.id = failure_event_id)), '')
+      ),
+      generation_id = COALESCE(
+        NULLIF(TRIM(generation_id), ''),
+        NULLIF(TRIM((SELECT e.generation_id FROM events e WHERE e.id = pre_event_id)), ''),
+        NULLIF(TRIM((SELECT e.generation_id FROM events e WHERE e.id = post_event_id)), ''),
+        NULLIF(TRIM((SELECT e.generation_id FROM events e WHERE e.id = failure_event_id)), '')
+      )
+    WHERE source = 'cursor'
+  `);
+
+  recordDataFix(db, fixName);
 }
 
 type SpanRow = {
@@ -385,6 +537,7 @@ export function mergeInteractionSpan(
     const ins = db.prepare(`
       INSERT INTO interaction_spans (
         session_key, source, correlation_id, turn_id,
+        conversation_id, generation_id,
         tool_canonical_name, mcp_server, mcp_tool,
         pre_event_id, post_event_id, failure_event_id,
         arg_token_estimate, result_token_estimate,
@@ -393,7 +546,7 @@ export function mergeInteractionSpan(
         git_repo_name, git_branch,
         started_at, completed_at
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
     if (derived.toolPhase === "pre") {
       ins.run(
@@ -401,6 +554,8 @@ export function mergeInteractionSpan(
         source,
         derived.correlationId,
         normalized.turnId ?? null,
+        normalized.conversationId ?? null,
+        normalized.generationId ?? null,
         toolName,
         mcpS,
         mcpT,
@@ -426,6 +581,8 @@ export function mergeInteractionSpan(
         source,
         derived.correlationId,
         normalized.turnId ?? null,
+        normalized.conversationId ?? null,
+        normalized.generationId ?? null,
         toolName,
         mcpS,
         mcpT,
@@ -451,6 +608,8 @@ export function mergeInteractionSpan(
         source,
         derived.correlationId,
         normalized.turnId ?? null,
+        normalized.conversationId ?? null,
+        normalized.generationId ?? null,
         toolName,
         mcpS,
         mcpT,
@@ -491,7 +650,9 @@ export function mergeInteractionSpan(
         tool_canonical_name = COALESCE(tool_canonical_name, ?),
         mcp_server = COALESCE(mcp_server, ?),
         mcp_tool = COALESCE(mcp_tool, ?),
-        turn_id = COALESCE(turn_id, ?)
+        turn_id = COALESCE(turn_id, ?),
+        conversation_id = COALESCE(conversation_id, ?),
+        generation_id = COALESCE(generation_id, ?)
       WHERE id = ?`,
     ).run(
       eventId,
@@ -509,6 +670,8 @@ export function mergeInteractionSpan(
       mcpS,
       mcpT,
       normalized.turnId ?? null,
+      normalized.conversationId ?? null,
+      normalized.generationId ?? null,
       existing.id,
     );
   } else if (derived.toolPhase === "post") {
@@ -528,7 +691,9 @@ export function mergeInteractionSpan(
         tool_canonical_name = COALESCE(tool_canonical_name, ?),
         mcp_server = COALESCE(mcp_server, ?),
         mcp_tool = COALESCE(mcp_tool, ?),
-        turn_id = COALESCE(turn_id, ?)
+        turn_id = COALESCE(turn_id, ?),
+        conversation_id = COALESCE(conversation_id, ?),
+        generation_id = COALESCE(generation_id, ?)
       WHERE id = ?`,
     ).run(
       eventId,
@@ -546,6 +711,8 @@ export function mergeInteractionSpan(
       mcpS,
       mcpT,
       normalized.turnId ?? null,
+      normalized.conversationId ?? null,
+      normalized.generationId ?? null,
       existing.id,
     );
   } else {
@@ -565,7 +732,9 @@ export function mergeInteractionSpan(
         tool_canonical_name = COALESCE(tool_canonical_name, ?),
         mcp_server = COALESCE(mcp_server, ?),
         mcp_tool = COALESCE(mcp_tool, ?),
-        turn_id = COALESCE(turn_id, ?)
+        turn_id = COALESCE(turn_id, ?),
+        conversation_id = COALESCE(conversation_id, ?),
+        generation_id = COALESCE(generation_id, ?)
       WHERE id = ?`,
     ).run(
       eventId,
@@ -583,6 +752,8 @@ export function mergeInteractionSpan(
       mcpS,
       mcpT,
       normalized.turnId ?? null,
+      normalized.conversationId ?? null,
+      normalized.generationId ?? null,
       existing.id,
     );
   }

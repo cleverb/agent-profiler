@@ -75,33 +75,10 @@ function fingerprintPrompt(text: string): string | null {
 }
 
 function hookToInteractionKind(
-  source: TelemetryHookSource,
+  _source: TelemetryHookSource,
   hookEventName: string,
 ): { kind: string; toolPhase: ToolSpanPhase | null } {
-  const cursorMap: Record<
-    string,
-    { kind: string; toolPhase: ToolSpanPhase | null }
-  > = {
-    beforeSubmitPrompt: { kind: "user_prompt_submit", toolPhase: null },
-    afterAgentResponse: { kind: "model_output", toolPhase: null },
-    afterAgentThought: { kind: "model_thought", toolPhase: null },
-    preToolUse: { kind: "tool_request", toolPhase: "pre" },
-    postToolUse: { kind: "tool_result_event", toolPhase: "post" },
-    postToolUseFailure: { kind: "tool_failure_event", toolPhase: "failure" },
-    beforeMCPExecution: { kind: "mcp_request", toolPhase: "pre" },
-    afterMCPExecution: { kind: "mcp_result_event", toolPhase: "post" },
-    beforeShellExecution: { kind: "shell_command_request", toolPhase: "pre" },
-    afterShellExecution: { kind: "shell_output", toolPhase: null },
-    afterFileEdit: { kind: "file_edit", toolPhase: null },
-    beforeReadFile: { kind: "file_read_request", toolPhase: "pre" },
-    start: { kind: "session_start", toolPhase: null },
-    sessionStart: { kind: "session_start", toolPhase: null },
-    stop: { kind: "session_stop", toolPhase: null },
-    sessionEnd: { kind: "session_end", toolPhase: null },
-    preCompact: { kind: "context_compact", toolPhase: null },
-  };
-
-  const codexMap: Record<
+  const canonicalMap: Record<
     string,
     { kind: string; toolPhase: ToolSpanPhase | null }
   > = {
@@ -109,11 +86,18 @@ function hookToInteractionKind(
     UserPromptSubmit: { kind: "user_prompt_submit", toolPhase: null },
     PreToolUse: { kind: "tool_request", toolPhase: "pre" },
     PostToolUse: { kind: "tool_result_event", toolPhase: "post" },
+    PostToolUseFailure: { kind: "tool_failure_event", toolPhase: "failure" },
+    BeforeShellExecution: { kind: "shell_command_request", toolPhase: "pre" },
+    AfterShellExecution: { kind: "shell_output", toolPhase: null },
+    AfterFileEdit: { kind: "file_edit", toolPhase: null },
+    BeforeReadFile: { kind: "file_read_request", toolPhase: "pre" },
+    AfterAgentResponse: { kind: "model_output", toolPhase: null },
+    AfterAgentThought: { kind: "model_thought", toolPhase: null },
+    PreCompact: { kind: "context_compact", toolPhase: null },
     Stop: { kind: "session_stop", toolPhase: null },
   };
 
-  const mapped =
-    source === "codex" ? codexMap[hookEventName] : cursorMap[hookEventName];
+  const mapped = canonicalMap[hookEventName];
   if (mapped) return mapped;
 
   return { kind: `other:${hookEventName}`, toolPhase: null };

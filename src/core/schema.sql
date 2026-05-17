@@ -6,6 +6,10 @@ CREATE TABLE IF NOT EXISTS events (
   repo_path TEXT,
   session_id TEXT,
   turn_id TEXT,
+  conversation_id TEXT,
+  generation_id TEXT,
+  ingested_by_version TEXT,
+  normalization_version INTEGER,
   model TEXT,
   role TEXT NOT NULL,
   estimated_input_tokens INTEGER DEFAULT 0,
@@ -36,6 +40,8 @@ CREATE TABLE IF NOT EXISTS interaction_spans (
   source TEXT NOT NULL,
   correlation_id TEXT NOT NULL,
   turn_id TEXT,
+  conversation_id TEXT,
+  generation_id TEXT,
   tool_canonical_name TEXT,
   mcp_server TEXT,
   mcp_tool TEXT,
@@ -62,3 +68,15 @@ ON events(session_id, created_at);
 
 CREATE INDEX IF NOT EXISTS idx_events_source
 ON events(source, created_at);
+
+CREATE TABLE IF NOT EXISTS schema_versions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  applied_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS data_fix_versions (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  applied_at TEXT NOT NULL
+);

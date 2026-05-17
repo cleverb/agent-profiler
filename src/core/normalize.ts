@@ -19,6 +19,8 @@ export type NormalizedAgentEvent = {
   repoPath?: string;
   sessionId?: string;
   turnId?: string;
+  conversationId?: string;
+  generationId?: string;
   model?: string;
   role: AgentEventRole;
   observableText: string;
