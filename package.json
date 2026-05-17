@@ -47,7 +47,12 @@
     "prerelease": "npm run build && node scripts/prepublish-checks.js",
     "release": "npm run build && semantic-release",
     "release:canary": "npm run build && npm_config_provenance=true auto canary",
-    "adr-skill": "node .agents/skills/adr-agent-skill/bin/cli.cjs"
+    "adr-skill": "node .agents/skills/adr-agent-skill/bin/cli.cjs",
+    "clean:pages": "node scripts/clean-pages.mjs",
+    "build:site": "npm exec --yes --package=@11ty/eleventy -- eleventy --config=eleventy.config.mjs",
+    "build:dashboard": "node scripts/copy-pages-dashboard.mjs",
+    "build:storybook": "node scripts/build-storybook.mjs",
+    "build:pages": "npm run clean:pages && npm run build:site && npm run build:dashboard && npm run build:storybook && node scripts/finish-pages-build.mjs"
   },
   "dependencies": {
     "better-sqlite3": "^12.9.0",
