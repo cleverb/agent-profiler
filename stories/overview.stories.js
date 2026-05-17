@@ -1,6 +1,5 @@
 export default {
   title: "Agent Profiler/Overview",
-  tags: ["autodocs"],
 };
 
 export const MarketingHero = () => `

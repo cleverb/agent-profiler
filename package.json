@@ -51,7 +51,7 @@
     "clean:pages": "node scripts/clean-pages.mjs",
     "build:site": "npm exec --yes --package=@11ty/eleventy -- eleventy --config=eleventy.config.mjs",
     "build:dashboard": "node scripts/copy-pages-dashboard.mjs",
-    "build:storybook": "npm exec --yes --package=storybook --package=@storybook/html-vite --package=@storybook/addon-docs -- storybook build -o dist-pages/storybook",
+    "build:storybook": "npm exec --yes --package=storybook --package=@storybook/html-vite -- storybook build -o dist-pages/storybook",
     "build:pages": "npm run clean:pages && npm run build:site && npm run build:dashboard && npm run build:storybook && node scripts/finish-pages-build.mjs"
   },
   "dependencies": {
