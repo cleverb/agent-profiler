@@ -6,6 +6,9 @@ const config = {
     name: "@storybook/html-vite",
     options: {},
   },
+  core: {
+    disableTelemetry: true,
+  },
 };
 
 export default config;

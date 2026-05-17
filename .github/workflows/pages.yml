@@ -18,6 +18,8 @@ concurrency:
 
 jobs:
   build:
+    env:
+      STORYBOOK_DISABLE_TELEMETRY: 1
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
