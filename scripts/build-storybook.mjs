@@ -1,13 +1,15 @@
 import { spawnSync } from "node:child_process";
 
+const storybookVersion = "8.6.14";
 const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
 const result = spawnSync(
   npmCommand,
   [
     "exec",
     "--yes",
-    "--package=storybook",
-    "--package=@storybook/html-vite",
+    `--package=storybook@${storybookVersion}`,
+    `--package=@storybook/html-vite@${storybookVersion}`,
+    `--package=@storybook/builder-vite@${storybookVersion}`,
     "--",
     "storybook",
     "build",
@@ -19,6 +21,7 @@ const result = spawnSync(
     stdio: "inherit",
     env: {
       ...process.env,
+      CI: "1",
       STORYBOOK_DISABLE_TELEMETRY: "1",
     },
   },
