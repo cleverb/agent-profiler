@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="{{ description or 'Agent Profiler is a local-first tool for understanding AI coding-agent hook traffic and efficiency signals.' }}" />
+    <title>{{ title }} · Agent Profiler</title>
+    <link rel="stylesheet" href="/assets/styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <nav class="nav" aria-label="Primary navigation">
+        <a class="brand" href="/">Agent Profiler</a>
+        <div class="nav-links">
+          <a href="/getting-started/">Getting started</a>
+          <a href="/dashboard/">Dashboard</a>
+          <a href="/storybook/">Storybook</a>
+          <a href="https://github.com/cleverb/agent-profiler">GitHub</a>
+        </div>
+      </nav>
+    </header>
+
+    <main class="content">
+      {{ content | safe }}
+    </main>
+
+    <footer class="site-footer">
+      <p>Local-first profiling for AI coding agents. Static site built with Eleventy.</p>
+    </footer>
+  </body>
+</html>
