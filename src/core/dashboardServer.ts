@@ -18,11 +18,12 @@ import { runContextAudit } from "./contextAudit.js";
 import { getLocalProfileDir } from "./profile.js";
 
 /** Bump when bundled dashboard assets change so consumers pick up updates. */
-export const DASHBOARD_ASSETS_VERSION = "2";
+export const DASHBOARD_ASSETS_VERSION = "3";
 
 /**
- * Built CLI reads `dist/dashboard/` (flat). `tsx src/...` resolves under `src/core/`, where sources live in
- * `src/dashboard/public/` — prefer whichever layout contains `index.html`.
+ * Built CLI reads `dist/dashboard/` (flat). Development sources live under
+ * `packages/dashboard/public/` (HTML/CSS); the browser bundle is built into
+ * `packages/dashboard/dist/` then copied beside those assets in `dist/dashboard/`.
  */
 export function resolvePackagedDashboardDir(): string {
   const coreDir = path.dirname(fileURLToPath(import.meta.url));

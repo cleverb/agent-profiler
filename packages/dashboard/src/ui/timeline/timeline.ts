@@ -1,9 +1,8 @@
 /**
- * Parameterized HTML fragments for timeline / histogram demos (Storybook).
+ * Timeline card + flex-based track for Storybook demos (not time-proportional).
  */
 import { escapeHtml } from "../shared/escapeHtml.js";
-
-export type TimelineRole = "user" | "assistant" | "tool" | "shell" | "other";
+import type { TimelineRole } from "../shared/timelineRoles.js";
 
 export type TimelineSegment = {
   role: TimelineRole;
@@ -67,3 +66,9 @@ export function timelineSampleSegmentsHtml(
 </section>
 `.trim();
 }
+
+export type { TimelineRole } from "../shared/timelineRoles.js";
+export { timelineTrackInnerHtml } from "./timeline-track.js";
+export type { TimelineTrackSegmentInput } from "./timeline-track.js";
+export { computeTimelineTrackSegments } from "./compute-timeline.js";
+export type { TimelineApiEvent } from "./compute-timeline.js";

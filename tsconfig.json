@@ -11,6 +11,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["src"],
-  "exclude": ["src/dashboard/stories", "src/dashboard/ui"]
+  "include": ["src"]
 }

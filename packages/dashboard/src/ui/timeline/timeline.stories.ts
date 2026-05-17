@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/html";
 
-import { timelineSampleSegmentsHtml, type TimelineCardProps } from ".";
+import { timelineSampleSegmentsHtml, type TimelineCardProps } from "./index.js";
 
 const meta = {
   title: "Dashboard/TimelineCard",

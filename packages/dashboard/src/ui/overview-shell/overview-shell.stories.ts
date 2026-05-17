@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/html";
 
-import { overviewShellHtml, type OverviewShellProps } from ".";
+import { overviewShellHtml, type OverviewShellProps } from "./index.js";
 
 const meta = {
   title: "Dashboard/OverviewShell",

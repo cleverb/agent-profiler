@@ -1,0 +1,14 @@
+{
+  "name": "@agent-profiler/dashboard",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "rollup -c"
+  },
+  "devDependencies": {
+    "@rollup/plugin-node-resolve": "^16.0.0",
+    "@rollup/plugin-typescript": "^12.1.2",
+    "rollup": "^4.40.0",
+    "typescript": "^5.0.0"
+  }
+}

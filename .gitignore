@@ -1,6 +1,7 @@
 node_modules/
 dist/
 storybook-static/
+packages/dashboard/dist/
 .DS_Store
 
 # Local profiler store and SQLite sidecars

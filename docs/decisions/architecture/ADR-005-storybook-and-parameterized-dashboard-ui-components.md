@@ -20,8 +20,8 @@ Concretely:
 
 - **Storybook**: Configure at repo root (`.storybook/main.ts`, `.storybook/preview.ts`), with stories discovered from dashboard UI sources (`**/*.stories.ts` co-located with modules or under the dashboard package as the tree evolves). Use **`@storybook/addon-docs`** where helpful. Keep **Storybook and related packages as devDependencies** only; do **not** list Storybook output or config in `package.json` `files`.
 - **Stack alignment**: Use **Pico.css** as a baseline layer in Storybook preview and in the shipped dashboard (`pico.min.css` produced at build time from `node_modules` via the existing copy script). Drive light/dark via **`data-theme` on `<html>`** and dashboard CSS tokens scoped to `html[data-theme="light"]` / `html[data-theme="dark"]`. Storybook preview exposes a **toolbar theme control** (decorator) that sets `data-theme` and `color-scheme` on the preview document.
-- **Components**: Implement presentation helpers under **`src/dashboard/ui/`** (or a dedicated workspace package if the tree is refactored) as pure functions + types, e.g. `overviewShellHtml(props)`, `timelineSampleSegmentsHtml(props)`, `toolResultVerticalBarsHtml(props)`, plus small **inner-fragment** helpers when runtime DOM must match existing `index.html` regions one-to-one. All user-, API-, or path-derived strings interpolated into HTML must pass through a shared **`escapeHtml`** helper.
-- **Runtime vs Storybook**: Until the browser bundle is integrated, the **live dashboard entry** may remain separate from Storybook-only compositions; the ADR still governs **how** UI is authored and tested. A follow-up change may bundle the same modules for production via Rollup (or similar) without changing the Storybook/HTML story model.
+- **Components**: Implement presentation helpers under **`packages/dashboard/src/ui/`** as pure functions + types, e.g. `overviewShellHtml(props)`, `timelineSampleSegmentsHtml(props)`, `toolResultVerticalBarsHtml(props)`, plus small **inner-fragment** helpers when runtime DOM must match existing `index.html` regions one-to-one. All user-, API-, or path-derived strings interpolated into HTML must pass through a shared **`escapeHtml`** helper.
+- **Runtime vs Storybook**: The **live dashboard** loads a **Rollup IIFE bundle** (`packages/dashboard/src/browser/main.ts`) that uses the same HTML helpers as stories (usage bars, timeline track, vertical bars, sparkline points). Storybook-only compositions (e.g. full overview shell, flex-based timeline demos) stay in stories.
 
 Non-goals:
 
@@ -34,12 +34,12 @@ Non-goals:
 - Good, because designers and implementers can iterate on layout, tokens, and parameterized examples with **fast feedback** and **theme toggling**.
 - Good, because **CSF stories + `args`** document intended props and edge cases next to the code.
 - Good, because **`escapeHtml`** and typed props set expectations for safe integration with real session data.
-- Bad, because **two representations** (string templates vs legacy imperative `app.js`) can drift until the runtime uses the same modules or strict parity checks are added.
+- Good, because the **bundled dashboard entry** consumes the same template helpers as Storybook, reducing markup drift for the main panels.
 - Bad, because **HTML string templates** require discipline: any new dynamic field must be escaped; complex SVG or DOM may still need imperative code for correctness.
 
 ## Implementation Plan
 
-- **Affected paths**: `.storybook/`, `package.json` scripts (`storybook`, `build-storybook`), `src/dashboard/ui/**` (or `packages/dashboard/src/ui/**` after workspace extraction), optional `storybook-static/` gitignore, `scripts/copy-build-assets.mjs` for Pico, `src/dashboard/public/styles.css` for theme tokens, `src/dashboard/public/index.html` for stylesheets and default `data-theme`
+- **Affected paths**: `.storybook/`, `package.json` scripts (`storybook`, `build-storybook`), `packages/dashboard/src/ui/**`, `packages/dashboard/src/browser/main.ts`, `packages/dashboard/public/**`, optional `storybook-static/` gitignore, `scripts/copy-build-assets.mjs` for Pico and dashboard assembly
 - **Dependencies (dev)**: `storybook@10.x`, `@storybook/html-vite@10.x`, `@storybook/addon-docs@10.x`, `vite` compatible with Storybook peers, `@picocss/pico` for CSS; align Storybook-related package **majors** when upgrading
 - **Patterns to follow**: Import Pico then dashboard CSS in preview; prefer **typed props** with defaults; export **inner HTML** fragments when the shell is fixed in `index.html`; use **`escapeHtml`** for interpolated strings; co-locate `*.stories.ts` with the modules they exercise
 - **Patterns to avoid**: Importing Storybook from runtime dashboard code; committing `node_modules` or vendored Pico into `public/`; unescaped interpolation of API or filesystem strings into HTML
@@ -49,7 +49,7 @@ Non-goals:
 - [x] `.storybook/main.ts` targets the dashboard Storybook framework and story glob.
 - [x] `.storybook/preview.ts` loads Pico + dashboard CSS and applies a theme toolbar decorator.
 - [x] `npm run storybook` and `npm run build-storybook` succeed.
-- [x] Dashboard UI helpers live under `src/dashboard/ui/` with shared `escapeHtml` and exported types.
+- [x] Dashboard UI helpers live under `packages/dashboard/src/ui/` with shared `escapeHtml` and exported types.
 - [x] Published package contents remain limited to `dist/**/*` per `package.json` `files` (no Storybook artifacts).
 
 ## Alternatives Considered
@@ -60,4 +60,4 @@ Non-goals:
 
 ## More Information
 
-Related implementation direction (bundling the same modules into the shipped `app.js`, workspaces, Rollup) may be captured in a separate ADR or as an extension to the Implementation Plan once that work lands; this ADR establishes the **authoring and documentation** standard for dashboard UI regardless of bundle wiring.
+Bundling uses the **`@agent-profiler/dashboard`** workspace (`npm run build` runs Rollup, then copies assets into `dist/dashboard/`). The **authoring and documentation** standard for dashboard UI is captured above.

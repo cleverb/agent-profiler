@@ -1,6 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/html";
 
-import { toolResultVerticalBarsHtml, type ToolHistogramProps } from ".";
+import {
+  toolResultVerticalBarsHtml,
+  type ToolHistogramProps,
+} from "./index.js";
 
 const meta = {
   title: "Dashboard/ToolHistogram",
@@ -24,17 +27,17 @@ export const LongTail: Story = {
     title: "Tool result sizes",
     maxWidth: "560px",
     items: [
-      { label: "read_file", heightPct: 95 },
-      { label: "grep", heightPct: 35 },
-      { label: "run_terminal_cmd", heightPct: 55 },
-      { label: "mcp.fetch", heightPct: 20 },
-      { label: "other", heightPct: 10 },
+      { label: "read_file", heightPct: 95, valueText: "120" },
+      { label: "grep", heightPct: 35, valueText: "40" },
+      { label: "run_terminal_cmd", heightPct: 55, valueText: "55" },
+      { label: "mcp.fetch", heightPct: 20, valueText: "12" },
+      { label: "other", heightPct: 10, valueText: "3" },
     ],
   },
 };
 
 export const SingleDominant: Story = {
   args: {
-    items: [{ label: "read_file", heightPct: 100 }],
+    items: [{ label: "read_file", heightPct: 100, valueText: "42" }],
   },
 };
