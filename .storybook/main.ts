@@ -15,7 +15,6 @@ const config: StorybookConfig = {
     "@vueless/storybook-dark-mode",
     "@storybook/addon-mcp",
     "storybook-addon-tag-badges",
-    "@vueless/storybook-dark-mode",
     {
       // name: getAbsolutePath("@cleverb/storybook-addon-adr"),
       name: "storybook-addon-decision-records",
