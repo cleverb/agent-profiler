@@ -17,6 +17,9 @@ import {
 } from "../core/db.js";
 import type { InitSource } from "./init.js";
 import type { NormalizedAgentEvent } from "../core/normalize.js";
+import { getIngestVersion } from "../core/packageMeta.js";
+
+const NORMALIZATION_VERSION = 2;
 
 function readStdin(): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -95,7 +98,7 @@ export async function runHook(
     const workspaceGit = resolveWorkspaceGitMeta(workspacePath);
     const derived = deriveIngestFields(
       source as TelemetryHookSource,
-      eventName,
+      normalized.sourceEvent,
       rawPayload,
       stdinText,
       normalized,
@@ -106,6 +109,10 @@ export async function runHook(
       payloadHash,
       workspaceGit,
       derived,
+      {
+        ingestedByVersion: getIngestVersion(),
+        normalizationVersion: NORMALIZATION_VERSION,
+      },
     );
     mergeInteractionSpan(db, eventId, normalized, workspaceGit, derived);
   } finally {

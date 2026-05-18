@@ -1,0 +1,24 @@
+---
+description: Commit messages satisfy commitlint (repo types + sentence-case subjects)
+alwaysApply: true
+---
+
+# Commit messages
+
+When proposing or composing a **git commit message** for this repo:
+
+1. **`commitlint.config.js` is authoritative** — it extends **`@commitlint/config-conventional`** but overrides **`type-enum`** and **`subject-case`**.
+2. **Types allowed only:** `feat`, `fix`, `docs`, `refactor`, `style`, `test`, `revert`, `chore`. Do **not** use common extras such as `build`, `ci`, or `perf` unless the enum in config is expanded.
+3. **Subject:** **sentence-case** after the colon (not the all-lowercase subject style often shown in conventional-commit tutorials).
+4. **Body lines:** when the message has a body, **each line ≤ 100 characters** (`body-max-line-length` from conventional config). Wrap bullets; indent continuations if needed.
+5. **Full detail + examples:** see **`AGENTS.md` → Commit messages (commitlint)**.
+
+Validate before `git commit` (pipe the full message, not only the header):
+
+```bash
+printf '%s\n' '<type>: <Subject>
+
+- Bullet line under 95 chars.
+- Long bullet wrapped on the next line with leading spaces for
+  continuation.' | npx commitlint
+```

@@ -60,3 +60,11 @@ Non-goals:
 ## More Information
 
 This decision was established in the initial implementation commit `10f767f`, which added the shared normalization type, the adapter modules, and the hook ingestion flow that routes through them.
+
+## Implementation History
+
+- 2026-05-16: Extended normalized event identity to include `conversationId` and `generationId` in `NormalizedAgentEvent`.
+- 2026-05-16: Strengthened Cursor normalization to support snake_case payload keys (`session_id`, `turn_id`, `generation_id`, `conversation_id`) and fallback `generation_id -> turn_id`.
+- 2026-05-16: Canonicalized Cursor lifecycle event names to PascalCase (`PreToolUse`, `PostToolUse`, `Stop`, etc.) so Cursor and Codex can share one lifecycle taxonomy.
+- 2026-05-16: Updated hook ingest derivation flow to use normalized canonical `sourceEvent` for downstream interaction-kind derivation.
+- 2026-05-16: Related cross-source disambiguation and migration governance were formalized in ADR-006 and ADR-007.

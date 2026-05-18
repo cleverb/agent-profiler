@@ -122,10 +122,18 @@ export function normalizeCodexEvent(
 
   return {
     source: "codex",
-    sourceEvent: eventName,
+    sourceEvent: pickFirstString([payload.hook_event_name]) ?? eventName,
     repoPath: cwd,
     sessionId,
     turnId,
+    conversationId: pickFirstString([
+      payload.conversation_id,
+      payload.conversationId,
+    ]),
+    generationId: pickFirstString([
+      payload.generation_id,
+      payload.generationId,
+    ]),
     model,
     role,
     observableText,

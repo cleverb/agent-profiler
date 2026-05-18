@@ -1,0 +1,53 @@
+/**
+ * Vertical tool/context histogram bars (`verticalBarsInnerHtml`).
+ * Modifiers on `.bars` from histogram markup.
+ */
+
+.bars.vertical {
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 0.5rem;
+  min-height: 120px;
+
+  &.tall {
+    min-height: 180px;
+    flex-wrap: wrap;
+  }
+}
+
+.vbar-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.65rem;
+  color: var(--muted);
+  max-width: 72px;
+}
+
+.vbar-track {
+  width: 14px;
+  height: 100px;
+  background: var(--track-bg);
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+}
+
+.vbar-fill {
+  width: 100%;
+  background: var(--accent);
+  border-radius: 4px;
+  transition: height 0.2s ease;
+}
+
+.vbar-label {
+  writing-mode: horizontal-tb;
+  text-align: center;
+  word-break: break-all;
+  line-height: 1.15;
+  max-height: 2.8em;
+  overflow: hidden;
+}

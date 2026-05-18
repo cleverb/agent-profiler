@@ -1,0 +1,35 @@
+/**
+ * Efficiency score + sparkline view styles.
+ * @see ADR-005
+ */
+
+.score-block {
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+
+.score {
+  font-size: 2.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.sparkline-wrap {
+  margin-top: 0.75rem;
+
+  svg {
+    width: 100%;
+    max-width: 240px;
+    height: 48px;
+  }
+
+  // Class-scoped so Storybook matches shipped dashboard without `#score-sparkline`
+  polyline {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+}

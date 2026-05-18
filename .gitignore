@@ -1,5 +1,7 @@
 node_modules/
 dist/
+storybook-static/
+packages/dashboard/dist/
 .DS_Store
 
 # Local profiler store and SQLite sidecars
@@ -8,8 +10,8 @@ dist/
 *.sqlite-wal
 
 # Machine-specific Cursor hook wiring (paths from `init cursor`)
-.cursor/
-.codex/
+.cursor/hooks.json
+.codex/hooks.json
 
 # Playwright artifacts
 .playwright-mcp/

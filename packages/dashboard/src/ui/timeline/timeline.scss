@@ -1,0 +1,79 @@
+/**
+ * Session timeline track + legend.
+ */
+
+.timeline-meta {
+  margin-bottom: 0.5rem;
+}
+
+.timeline-track {
+  display: flex;
+  height: 28px;
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--track-bg);
+}
+
+.timeline-seg {
+  height: 100%;
+  min-width: 2px;
+  flex-shrink: 0;
+
+  &.user {
+    background: var(--user);
+  }
+
+  &.assistant {
+    background: var(--assistant);
+  }
+
+  &.tool {
+    background: var(--tool);
+  }
+
+  &.shell {
+    background: var(--shell);
+  }
+
+  &.other {
+    background: var(--other);
+  }
+}
+
+.timeline-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+
+  .dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 0.25rem;
+    vertical-align: middle;
+
+    &.user {
+      background: var(--user);
+    }
+
+    &.assistant {
+      background: var(--assistant);
+    }
+
+    &.tool {
+      background: var(--tool);
+    }
+
+    &.shell {
+      background: var(--shell);
+    }
+
+    &.other {
+      background: var(--other);
+    }
+  }
+}

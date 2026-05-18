@@ -1,0 +1,20 @@
+/**
+ * Section panels produced by `dashboardCardHtml`.
+ * @see ADR-005
+ */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
+  min-width: 180px;
+}
+
+.span-2 {
+  grid-column: span 2;
+}
+
+.span-3 {
+  grid-column: span 3;
+}
