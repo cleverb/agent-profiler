@@ -6,7 +6,7 @@ import {
 } from "./dashboard-button.js";
 
 const meta = {
-  title: "Dashboard/Button",
+  title: "Dashboard/UIComponents/Button",
   tags: ["autodocs"],
   parameters: { layout: "centered" },
   render: (args: DashboardButtonProps) => dashboardButtonHtml(args),

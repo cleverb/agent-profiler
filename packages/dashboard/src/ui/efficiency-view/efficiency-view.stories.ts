@@ -1,20 +1,20 @@
 import type { Meta, StoryObj } from "@storybook/html";
 
 import {
-  efficiencyInnerHtml,
-  type EfficiencyInnerProps,
-} from "./efficiency-inner.js";
+  efficiencyViewHtml,
+  type EfficiencyViewProps,
+} from "./efficiency-view.js";
 
 const meta = {
-  title: "Dashboard/EfficiencyInner",
+  title: "Dashboard/Views/EfficiencyView",
   tags: ["autodocs"],
   parameters: { layout: "centered" },
-  render: (args: EfficiencyInnerProps) => efficiencyInnerHtml(args),
-} satisfies Meta<EfficiencyInnerProps>;
+  render: (args: EfficiencyViewProps) => efficiencyViewHtml(args),
+} satisfies Meta<EfficiencyViewProps>;
 
 export default meta;
 
-type Story = StoryObj<EfficiencyInnerProps>;
+type Story = StoryObj<EfficiencyViewProps>;
 
 export const Default: Story = {
   args: {

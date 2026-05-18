@@ -3,10 +3,40 @@
  * @see ADR-005
  */
 import { dashboardButtonHtml } from "../dashboard-button/dashboard-button.js";
-import { dashboardCardHtml } from "../dashboard-card/dashboard-card.js";
-import { efficiencyInnerHtml } from "../efficiency-inner/efficiency-inner.js";
+import {
+  dashboardGridHtml,
+  type DashboardGridTemplateAreaBreakpoints,
+  type DashboardGridTemplateAreasRows,
+} from "../dashboard-grid/dashboard-grid.js";
+import {
+  efficiencyViewHtml,
+  type EfficiencyViewProps,
+} from "../efficiency-view/efficiency-view.js";
+import {
+  observableUsageViewHtml,
+  type ObservableUsageViewProps,
+} from "../observable-usage-view/observable-usage-view.js";
+import {
+  contextAuditViewHtml,
+  type ContextAuditViewProps,
+} from "../context-audit-view/context-audit-view.js";
+import {
+  recommendationsViewHtml,
+  type RecommendationsViewProps,
+} from "../recommendations-view/recommendations-view.js";
+import {
+  redFlagsViewHtml,
+  type RedFlagsViewProps,
+} from "../red-flags-view/red-flags-view.js";
 import { escapeHtml } from "../shared/escapeHtml.js";
-import { usageTotalGaugeInnerHtml } from "../usage-total-gauge/usage-total-gauge.js";
+import {
+  toolHistogramViewHtml,
+  type ToolHistogramViewProps,
+} from "../tool-histogram-view/tool-histogram-view.js";
+import {
+  timelineViewHtml,
+  type TimelineViewProps,
+} from "../timeline-view/timeline-view.js";
 import type { UsageDialChartSegmentInput } from "../usage-total-gauge/usage-total-gauge-dial-chart.js";
 import {
   usageBreakdownBarsInnerHtml,
@@ -16,6 +46,22 @@ import {
 import type { UsageBarRow } from "../usage-bars/usage-bars.js";
 
 export type { UsageBarRow, UsageBarVariant } from "../usage-bars/usage-bars.js";
+
+export type OverviewShellOptions = {
+  observableUsageView?: Partial<ObservableUsageViewProps>;
+  efficiencyView?: Partial<EfficiencyViewProps>;
+  timelineView?: Partial<TimelineViewProps>;
+  toolHistogramView?: Partial<ToolHistogramViewProps>;
+  contextAuditView?: Partial<ContextAuditViewProps>;
+  redFlagsView?: Partial<RedFlagsViewProps>;
+  recommendationsView?: Partial<RecommendationsViewProps>;
+  dashboardGrid?: {
+    templateAreas?:
+      | DashboardGridTemplateAreasRows
+      | DashboardGridTemplateAreaBreakpoints;
+    className?: string;
+  };
+};
 
 export type OverviewShellProps = {
   title?: string;
@@ -46,7 +92,7 @@ export type OverviewShellProps = {
    * wrappers (`display: contents`) so the bundled dashboard can hydrate cards from API data.
    */
   useLiveOverviewSlots?: boolean;
-  /** Trusted HTML appended inside `<main class="grid">` after the overview row (or slots). */
+  /** Trusted HTML appended inside dashboard grid after the overview row (or slots). */
   additionalMainInnerHtml?: string;
   /** `id` on the session `<select>` (live dashboard wiring). */
   sessionSelectId?: string;
@@ -55,6 +101,11 @@ export type OverviewShellProps = {
   /** Passed through to {@link dashboardButtonHtml}. */
   refreshButtonId?: string;
   refreshButtonAriaLabel?: string;
+  /**
+   * View-level options object for one instance of each dashboard view.
+   * Supports incremental expansion as more views are extracted.
+   */
+  options?: OverviewShellOptions;
 };
 
 const defaultUsageRows: UsageBarRow[] = [
@@ -77,6 +128,7 @@ const defaultProps: Required<
     | "subtitleElementId"
     | "refreshButtonId"
     | "refreshButtonAriaLabel"
+    | "options"
   >
 > & {
   usageRows: UsageBarRow[];
@@ -128,34 +180,30 @@ export function overviewShellHtml(props: OverviewShellProps = {}): string {
             isAbbreviated: p.usageAbbreviated,
           });
 
-    const observableBody = `
-<div class="gauge-row">
-  ${usageTotalGaugeInnerHtml({
-    valueText: p.totalTokensValue,
-    caption: p.totalTokensCaption,
-    showDialChart: p.showDialChart,
-    isAbbreviated: true,
-  })}
-  <div class="bars">
-    ${usageBarsHtml}
-  </div>
-</div>`.trim();
-
-    const observableSection = dashboardCardHtml({
-      title: "Observable usage",
-      span: "2",
-      bodyHtml: observableBody,
+    const observableSection = observableUsageViewHtml({
+      id: p.options?.observableUsageView?.id,
+      className: p.options?.observableUsageView?.className,
+      title: p.options?.observableUsageView?.title ?? "Observable usage",
+      span: p.options?.observableUsageView?.span ?? "2",
+      valueText:
+        p.options?.observableUsageView?.valueText ?? p.totalTokensValue,
+      caption: p.options?.observableUsageView?.caption ?? p.totalTokensCaption,
+      barsHtml: p.options?.observableUsageView?.barsHtml ?? usageBarsHtml,
+      showDialChart:
+        p.options?.observableUsageView?.showDialChart ?? p.showDialChart,
+      valueElementId: p.options?.observableUsageView?.valueElementId,
+      isAbbreviated: p.options?.observableUsageView?.isAbbreviated ?? true,
+      barsElementId: p.options?.observableUsageView?.barsElementId,
     });
 
-    const efficiencyBody = efficiencyInnerHtml({
-      scoreText: p.efficiencyScore,
-      sparklinePoints: p.sparklinePoints,
-      svgId: "score-sparkline",
-    });
-
-    const efficiencySection = dashboardCardHtml({
-      title: "Efficiency",
-      bodyHtml: efficiencyBody,
+    const efficiencySection = efficiencyViewHtml({
+      id: p.options?.efficiencyView?.id,
+      className: p.options?.efficiencyView?.className,
+      title: p.options?.efficiencyView?.title ?? "Efficiency",
+      scoreText: p.options?.efficiencyView?.scoreText ?? p.efficiencyScore,
+      sparklinePoints:
+        p.options?.efficiencyView?.sparklinePoints ?? p.sparklinePoints,
+      svgId: p.options?.efficiencyView?.svgId ?? "score-sparkline",
     });
 
     overviewBlocks = `${observableSection}\n\n${efficiencySection}`;
@@ -175,6 +223,87 @@ export function overviewShellHtml(props: OverviewShellProps = {}): string {
     p.additionalMainInnerHtml.trim() === ""
       ? ""
       : `\n\n${p.additionalMainInnerHtml.trim()}`;
+
+  const lowerViewBlocks: string[] = [];
+  if (p.options?.timelineView != null) {
+    lowerViewBlocks.push(
+      timelineViewHtml({
+        id: p.options.timelineView.id,
+        className: p.options.timelineView.className,
+        title: p.options.timelineView.title ?? "Session timeline",
+        span: p.options.timelineView.span ?? "3",
+        metaLine: p.options.timelineView.metaLine ?? "",
+        metaElementId: p.options.timelineView.metaElementId,
+        trackHtml: p.options.timelineView.trackHtml,
+        trackElementId: p.options.timelineView.trackElementId,
+      }),
+    );
+  }
+  if (p.options?.toolHistogramView != null) {
+    lowerViewBlocks.push(
+      toolHistogramViewHtml({
+        id: p.options.toolHistogramView.id,
+        className: p.options.toolHistogramView.className,
+        title: p.options.toolHistogramView.title ?? "Tool result sizes",
+        span: p.options.toolHistogramView.span,
+        barsElementId: p.options.toolHistogramView.barsElementId,
+        barsHtml: p.options.toolHistogramView.barsHtml,
+        parityLineElementId: p.options.toolHistogramView.parityLineElementId,
+        parityLineText: p.options.toolHistogramView.parityLineText,
+        operationLineElementId:
+          p.options.toolHistogramView.operationLineElementId,
+        operationLineText: p.options.toolHistogramView.operationLineText,
+      }),
+    );
+  }
+  if (p.options?.contextAuditView != null) {
+    lowerViewBlocks.push(
+      contextAuditViewHtml({
+        id: p.options.contextAuditView.id,
+        className: p.options.contextAuditView.className,
+        title: p.options.contextAuditView.title ?? "Context audit",
+        span: p.options.contextAuditView.span ?? "2",
+        description:
+          p.options.contextAuditView.description ??
+          "Estimated tokens for always-on repo files",
+        barsElementId: p.options.contextAuditView.barsElementId,
+        barsHtml: p.options.contextAuditView.barsHtml,
+      }),
+    );
+  }
+  if (p.options?.redFlagsView != null) {
+    lowerViewBlocks.push(
+      redFlagsViewHtml({
+        id: p.options.redFlagsView.id,
+        className: p.options.redFlagsView.className,
+        title: p.options.redFlagsView.title ?? "Red flags",
+        span: p.options.redFlagsView.span,
+        listElementId: p.options.redFlagsView.listElementId,
+        listHtml: p.options.redFlagsView.listHtml,
+      }),
+    );
+  }
+  if (p.options?.recommendationsView != null) {
+    lowerViewBlocks.push(
+      recommendationsViewHtml({
+        id: p.options.recommendationsView.id,
+        className: p.options.recommendationsView.className,
+        title: p.options.recommendationsView.title ?? "Recommendations",
+        span: p.options.recommendationsView.span ?? "2",
+        listElementId: p.options.recommendationsView.listElementId,
+        listHtml: p.options.recommendationsView.listHtml,
+      }),
+    );
+  }
+  const lowerViewsSuffix =
+    lowerViewBlocks.length > 0 ? `\n\n${lowerViewBlocks.join("\n\n")}` : "";
+
+  const gridContentHtml = `${overviewBlocks}${suffix}${lowerViewsSuffix}`;
+  const dashboardGrid = dashboardGridHtml({
+    contentHtml: gridContentHtml,
+    templateAreas: p.options?.dashboardGrid?.templateAreas,
+    className: p.options?.dashboardGrid?.className,
+  });
 
   return `
 <div class="layout">
@@ -198,9 +327,7 @@ export function overviewShellHtml(props: OverviewShellProps = {}): string {
     </div>
   </header>
 
-  <main class="grid">
-    ${overviewBlocks}${suffix}
-  </main>
+  ${dashboardGrid}
 </div>
 `.trim();
 }

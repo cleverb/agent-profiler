@@ -6,7 +6,7 @@ import {
 } from "./index.js";
 
 const meta = {
-  title: "Dashboard/ToolHistogram",
+  title: "Dashboard/UIComponents/ToolHistogram",
   tags: ["autodocs"],
   parameters: {
     layout: "padded",

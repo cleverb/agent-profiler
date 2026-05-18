@@ -1,21 +1,20 @@
 import {
   attachUsageDialChart,
+  attachResponsiveDashboardGrids,
   computeTimelineTrackSegments,
   dashboardCardHtml,
   defaultUsageDialSegmentsFromUsage,
   detachUsageDialChartsIn,
-  efficiencyInnerHtml,
+  efficiencyViewHtml,
+  observableUsageViewHtml,
   formatTokenCountFull,
   overviewShellHtml,
   sparklinePolylinePoints,
   timelineTrackInnerHtml,
   usageBreakdownBarsInnerHtml,
-  usageTotalGaugeInnerHtml,
   verticalBarsInnerHtml,
   type UsageBreakdownBarRow,
 } from "../ui/index.js";
-
-import { DASHBOARD_LOWER_MAIN_HTML } from "./dashboard-lower-main-html.js";
 
 /** Half-doughnut token dial backed by Chart.js (`usageTotalGauge` + `attachUsageDialChart`). */
 const USAGE_TOTAL_SHOW_DIAL_CHART = true;
@@ -39,8 +38,28 @@ function mountDashboardShell() {
     sessionSelectId: "session-select",
     subtitleElementId: "meta-line",
     useLiveOverviewSlots: true,
-    additionalMainInnerHtml: DASHBOARD_LOWER_MAIN_HTML,
+    options: {
+      timelineView: {
+        metaElementId: "timeline-meta",
+        trackElementId: "timeline-track",
+      },
+      toolHistogramView: {
+        barsElementId: "tool-histogram",
+        parityLineElementId: "parity-line",
+        operationLineElementId: "operation-line",
+      },
+      contextAuditView: {
+        barsElementId: "context-bars",
+      },
+      redFlagsView: {
+        listElementId: "red-flags",
+      },
+      recommendationsView: {
+        listElementId: "recommendations",
+      },
+    },
   });
+  attachResponsiveDashboardGrids(root);
 }
 
 function el(id: string): HTMLElement {
@@ -126,25 +145,20 @@ function setOverviewObservableCard(
     totalTokens != null && !Number.isNaN(totalTokens)
       ? fmt(totalTokens)
       : fmt(usage.total);
-  const body = `
-<div class="gauge-row">
-  ${usageTotalGaugeInnerHtml({
+  detachUsageDialChartsIn(slot);
+  slot.innerHTML = observableUsageViewHtml({
+    title: "Observable usage",
+    span: "2",
     valueText: t,
     caption: "estimated total tokens",
     valueElementId: "total-tokens",
     showDialChart: USAGE_TOTAL_SHOW_DIAL_CHART,
-  })}
-  <div class="bars" id="usage-bars">${usageBreakdownBarsInnerHtml({
-    rows: usageBreakdownRowsFromUsage(usage),
     isAbbreviated: true,
-  })}</div>
-</div>`.trim();
-
-  detachUsageDialChartsIn(slot);
-  slot.innerHTML = dashboardCardHtml({
-    title: "Observable usage",
-    span: "2",
-    bodyHtml: body,
+    barsElementId: "usage-bars",
+    barsHtml: usageBreakdownBarsInnerHtml({
+      rows: usageBreakdownRowsFromUsage(usage),
+      isAbbreviated: true,
+    }),
   });
 
   if (USAGE_TOTAL_SHOW_DIAL_CHART) {
@@ -164,14 +178,11 @@ function setOverviewEfficiencyCard(
     efficiencyScore != null && !Number.isNaN(Number(efficiencyScore))
       ? String(efficiencyScore)
       : "—";
-  const inner = efficiencyInnerHtml({
+  slot.innerHTML = efficiencyViewHtml({
+    title: "Efficiency",
     scoreText,
     sparklinePoints: sparkPts,
     svgId: "score-sparkline",
-  });
-  slot.innerHTML = dashboardCardHtml({
-    title: "Efficiency",
-    bodyHtml: inner,
   });
 }
 

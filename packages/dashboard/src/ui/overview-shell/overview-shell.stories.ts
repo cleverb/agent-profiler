@@ -4,11 +4,13 @@ import {
   attachUsageDialChart,
   defaultUsageDialSegmentsFromUsage,
 } from "../usage-total-gauge/usage-total-gauge-dial-chart.js";
+import { attachResponsiveDashboardGrids } from "../dashboard-grid/dashboard-grid.js";
 import { overviewShellHtml, type OverviewShellProps } from "./index.js";
 
 function renderOverviewHtml(args: OverviewShellProps): HTMLElement {
   const wrap = document.createElement("div");
   wrap.innerHTML = overviewShellHtml(args);
+  attachResponsiveDashboardGrids(wrap);
   const canvas = wrap.querySelector('canvas[data-gauge-dial="1"]');
   if (
     canvas instanceof HTMLCanvasElement &&
@@ -22,7 +24,7 @@ function renderOverviewHtml(args: OverviewShellProps): HTMLElement {
 }
 
 const meta = {
-  title: "Dashboard/OverviewShell",
+  title: "Dashboard/Views/OverviewShell",
   tags: ["autodocs"],
   parameters: {
     layout: "fullscreen",

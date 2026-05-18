@@ -127,12 +127,12 @@ button:hover {
   color: var(--muted);
 }
 
-.grid {
+.dashboard-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
 }
-.grid > * {
+.dashboard-grid > * {
   min-width: 0;
 }
 
@@ -141,7 +141,7 @@ button:hover {
 }
 
 @media (max-width: 900px) {
-  .grid {
+  .dashboard-grid {
     grid-template-columns: 1fr;
   }
   .card.span-2,
@@ -177,6 +177,68 @@ button:hover {
   color: var(--tool);
 }
 
+/**
+ * Dynamic grid surface for dashboard cards.
+ * @see ADR-005
+ */
+.dashboard-grid {
+  width: 100%;
+  display: grid;
+  gap: 0.875rem;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-auto-rows: minmax(220px, auto);
+}
+
+.dashboard-grid > * {
+  min-width: 0;
+}
+
+.dashboard-grid .card-a {
+  grid-area: a;
+}
+
+.dashboard-grid .card-b {
+  grid-area: b;
+}
+
+.dashboard-grid .card-c {
+  grid-area: c;
+}
+
+.dashboard-grid .card-d {
+  grid-area: d;
+}
+
+.dashboard-grid .card-e {
+  grid-area: e;
+}
+
+.dashboard-grid .card-f {
+  grid-area: f;
+}
+
+.dashboard-grid .card-g {
+  grid-area: g;
+}
+
+.dashboard-grid .card-h {
+  grid-area: h;
+}
+
+.dashboard-grid .card-i {
+  grid-area: i;
+}
+
+.dashboard-grid .card-j {
+  grid-area: j;
+}
+
+@media (max-width: 900px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    grid-auto-rows: auto;
+  }
+}
 /**
  * Section panels produced by `dashboardCardHtml`.
  * @see ADR-005
@@ -388,7 +450,7 @@ button:hover {
 }
 
 /**
- * Efficiency score + sparkline inner fragment.
+ * Efficiency score + sparkline view styles.
  * @see ADR-005
  */
 .score-block {

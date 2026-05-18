@@ -11,6 +11,8 @@ export type DashboardCardProps = {
   bodyHtml: string;
   title?: string;
   span?: DashboardCardSpan;
+  /** Optional DOM id on the `<section>`. */
+  id?: string;
   /** Concatenated after `.card` and optional span class (trimmed). */
   className?: string;
 };
@@ -27,9 +29,11 @@ export function dashboardCardHtml(props: DashboardCardProps): string {
     props.title != null && props.title !== ""
       ? `<h2>${escapeHtml(props.title)}</h2>\n`
       : "";
+  const idAttr =
+    props.id != null && props.id !== "" ? ` id="${escapeHtml(props.id)}"` : "";
 
   return `
-<section class="${escapeHtml(componentClass)}">
+<section${idAttr} class="${escapeHtml(componentClass)}">
   ${heading}${props.bodyHtml}
 </section>
 `.trim();

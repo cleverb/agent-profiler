@@ -20,7 +20,7 @@ Architecture Decision Records (ADRs) capture durable project decisions together 
 3. Mark it `accepted` or `rejected` once the decision is made.
 4. If a later ADR replaces it, mark the older one `superseded` and link both records.
 
-## ADR Index
+## Index
 
 | ADR                                                                                               | Title                                                                           | Category       | Status   | Date       |
 | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | -------------- | -------- | ---------- |

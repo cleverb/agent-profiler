@@ -6,7 +6,7 @@ import {
 } from "./dashboard-card.js";
 
 const meta = {
-  title: "Dashboard/Card",
+  title: "Dashboard/UIComponents/Card",
   tags: ["autodocs"],
   parameters: { layout: "padded" },
   args: {

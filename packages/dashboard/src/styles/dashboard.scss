@@ -4,9 +4,10 @@
 @use "themes";
 @use "base";
 @use "../ui/overview-shell/overview-shell";
+@use "../ui/dashboard-grid/dashboard-grid";
 @use "../ui/dashboard-card/dashboard-card";
 @use "../ui/usage-total-gauge/usage-total-gauge";
 @use "../ui/usage-bars/usage-bars";
 @use "../ui/histogram/histogram";
-@use "../ui/efficiency-inner/efficiency-inner";
+@use "../ui/efficiency-view/efficiency-view";
 @use "../ui/timeline/timeline";

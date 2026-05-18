@@ -18,7 +18,7 @@ const sampleRows = [
 ];
 
 const meta = {
-  title: "Dashboard/UsageBreakdownBars",
+  title: "Dashboard/UIComponents/UsageBreakdownBars",
   tags: ["autodocs"],
   parameters: { layout: "padded" },
   render: (args: UsageBreakdownBarsInnerProps) =>

@@ -32,7 +32,7 @@ function renderGauge(args: UsageTotalGaugeProps): HTMLElement {
 }
 
 const meta = {
-  title: "Dashboard/UsageTotalGauge",
+  title: "Dashboard/UIComponents/UsageTotalGauge",
   tags: ["autodocs"],
   parameters: { layout: "centered" },
   render: renderGauge,

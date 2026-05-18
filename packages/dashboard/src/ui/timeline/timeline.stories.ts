@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from "@storybook/html";
 import { timelineSampleSegmentsHtml, type TimelineCardProps } from "./index.js";
 
 const meta = {
-  title: "Dashboard/TimelineCard",
+  title: "Dashboard/UIComponents/Timeline",
   tags: ["autodocs"],
   parameters: {
     layout: "padded",

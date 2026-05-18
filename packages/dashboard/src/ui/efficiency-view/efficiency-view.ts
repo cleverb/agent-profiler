@@ -1,10 +1,17 @@
 /**
- * Efficiency score + sparkline inner fragment.
+ * Efficiency score + sparkline card view.
  * @see ADR-005
  */
+import { dashboardCardHtml } from "../dashboard-card/dashboard-card.js";
 import { escapeHtml } from "../shared/escapeHtml.js";
 
-export type EfficiencyInnerProps = {
+export type EfficiencyViewProps = {
+  /** Optional DOM id on the card section. */
+  id?: string;
+  /** Optional extra card classes (for grid-area hooks like `card-a`). */
+  className?: string;
+  /** Optional card heading. */
+  title?: string;
   scoreText: string;
   /** SVG polyline `points` attribute */
   sparklinePoints: string;
@@ -12,7 +19,9 @@ export type EfficiencyInnerProps = {
   svgId?: string;
 };
 
-export function efficiencyInnerHtml(props: EfficiencyInnerProps): string {
+function efficiencyViewInnerHtml(
+  props: Pick<EfficiencyViewProps, "scoreText" | "sparklinePoints" | "svgId">,
+): string {
   const idAttr =
     props.svgId != null && props.svgId !== ""
       ? ` id="${escapeHtml(props.svgId)}"`
@@ -31,4 +40,13 @@ export function efficiencyInnerHtml(props: EfficiencyInnerProps): string {
   </svg>
 </div>
 `.trim();
+}
+
+export function efficiencyViewHtml(props: EfficiencyViewProps): string {
+  return dashboardCardHtml({
+    id: props.id,
+    className: props.className,
+    title: props.title ?? "Efficiency",
+    bodyHtml: efficiencyViewInnerHtml(props),
+  });
 }

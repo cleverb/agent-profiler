@@ -24,9 +24,20 @@ export {
   type UsageDialChartSegmentInput,
 } from "./usage-total-gauge/usage-total-gauge-dial-chart.js";
 export {
-  efficiencyInnerHtml,
-  type EfficiencyInnerProps,
-} from "./efficiency-inner/efficiency-inner.js";
+  efficiencyViewHtml,
+  type EfficiencyViewProps,
+} from "./efficiency-view/efficiency-view.js";
+export {
+  attachResponsiveDashboardGrids,
+  dashboardGridHtml,
+  type DashboardGridProps,
+  type DashboardGridTemplateAreaBreakpoints,
+  type DashboardGridTemplateAreasRows,
+} from "./dashboard-grid/dashboard-grid.js";
+export {
+  observableUsageViewHtml,
+  type ObservableUsageViewProps,
+} from "./observable-usage-view/observable-usage-view.js";
 export {
   usageBreakdownBarsInnerHtml,
   usageRowsToBreakdownInnerHtml,
@@ -50,11 +61,31 @@ export {
   type TimelineTrackSegmentInput,
 } from "./timeline/timeline.js";
 export {
+  timelineViewHtml,
+  type TimelineViewProps,
+} from "./timeline-view/timeline-view.js";
+export {
   toolResultVerticalBarsHtml,
   verticalBarsInnerHtml,
   type ToolHistogramProps,
   type VerticalBarItem,
 } from "./histogram/histogram.js";
+export {
+  toolHistogramViewHtml,
+  type ToolHistogramViewProps,
+} from "./tool-histogram-view/tool-histogram-view.js";
+export {
+  contextAuditViewHtml,
+  type ContextAuditViewProps,
+} from "./context-audit-view/context-audit-view.js";
+export {
+  redFlagsViewHtml,
+  type RedFlagsViewProps,
+} from "./red-flags-view/red-flags-view.js";
+export {
+  recommendationsViewHtml,
+  type RecommendationsViewProps,
+} from "./recommendations-view/recommendations-view.js";
 export { usageBarsInnerHtml } from "./usage-bars/usage-bars.js";
 export {
   sparklinePolylinePoints,
