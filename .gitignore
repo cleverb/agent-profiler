@@ -12,6 +12,7 @@ packages/dashboard/dist/
 # Machine-specific Cursor hook wiring (paths from `init cursor`)
 .cursor/hooks.json
 .codex/hooks.json
+.claude/settings.json
 
 # Playwright artifacts
 .playwright-mcp/

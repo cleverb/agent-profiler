@@ -3,46 +3,7 @@ import type {
   AgentEventRole,
   NormalizedAgentEvent,
 } from "../core/normalize.js";
-
-const cursorRoleMap: Record<string, AgentEventRole> = {
-  beforeSubmitPrompt: "user_prompt",
-  afterAgentResponse: "assistant_output",
-  afterAgentThought: "assistant_output",
-  afterShellExecution: "shell_output",
-  afterFileEdit: "file_edit",
-  preToolUse: "tool_call",
-  postToolUse: "tool_result",
-  postToolUseFailure: "tool_failure",
-  beforeMCPExecution: "tool_call",
-  afterMCPExecution: "tool_result",
-  beforeShellExecution: "shell_command",
-  beforeReadFile: "tool_call",
-  start: "session_start",
-  sessionStart: "session_start",
-  stop: "session_stop",
-  sessionEnd: "session_stop",
-  preCompact: "unknown",
-};
-
-const cursorCanonicalEventMap: Record<string, string> = {
-  start: "SessionStart",
-  sessionStart: "SessionStart",
-  beforeSubmitPrompt: "UserPromptSubmit",
-  preToolUse: "PreToolUse",
-  postToolUse: "PostToolUse",
-  postToolUseFailure: "PostToolUseFailure",
-  beforeMCPExecution: "PreToolUse",
-  afterMCPExecution: "PostToolUse",
-  beforeShellExecution: "BeforeShellExecution",
-  afterShellExecution: "AfterShellExecution",
-  beforeReadFile: "BeforeReadFile",
-  afterFileEdit: "AfterFileEdit",
-  afterAgentThought: "AfterAgentThought",
-  afterAgentResponse: "AfterAgentResponse",
-  stop: "Stop",
-  sessionEnd: "Stop",
-  preCompact: "PreCompact",
-};
+import { resolveMappedHook } from "../core/hookMappings.js";
 
 function pickFirstString(values: unknown[]): string | undefined {
   for (const value of values) {
@@ -108,7 +69,12 @@ export function normalizeCursorEvent(
   rawPayload: unknown,
 ): NormalizedAgentEvent {
   const payload = asRecord(rawPayload);
-  const role = cursorRoleMap[eventName] ?? "unknown";
+  const mapped = resolveMappedHook(
+    "cursor",
+    eventName,
+    pickFirstString([payload.cursor_version, payload.cursorVersion]),
+  );
+  const role: AgentEventRole = mapped.role;
   const observableText = extractObservableText(payload);
 
   const estimatedInputTokens =
@@ -127,7 +93,7 @@ export function normalizeCursorEvent(
 
   return {
     source: "cursor",
-    sourceEvent: cursorCanonicalEventMap[eventName] ?? eventName,
+    sourceEvent: mapped.canonicalEvent,
     repoPath: pickFirstString([payload.repoPath, payload.workspacePath]),
     sessionId: pickFirstString([
       payload.session_id,

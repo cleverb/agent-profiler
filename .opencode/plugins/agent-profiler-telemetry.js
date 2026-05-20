@@ -1,0 +1,1 @@
+/Users/oeist/Sites/agent-profiler/packages/opencode-telemetry-plugin/src/index.js

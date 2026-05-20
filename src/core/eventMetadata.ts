@@ -2,7 +2,12 @@ import crypto from "node:crypto";
 import type { NormalizedAgentEvent } from "./normalize.js";
 
 /** Hook adapters that emit structured telemetry (matches CLI init sources). */
-export type TelemetryHookSource = "cursor" | "codex";
+export type TelemetryHookSource =
+  | "cursor"
+  | "codex"
+  | "claude-code"
+  | "opencode"
+  | "generic";
 
 export type ToolSpanPhase = "pre" | "post" | "failure";
 

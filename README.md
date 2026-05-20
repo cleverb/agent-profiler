@@ -84,6 +84,12 @@ Initialize hooks for Codex:
 agent-profiler init codex --mode prod
 ```
 
+Initialize hooks for Claude:
+
+```bash
+agent-profiler init claude --mode prod
+```
+
 Inspect the resulting setup and the latest captured session:
 
 ```bash
@@ -96,6 +102,7 @@ agent-profiler audit context
 
 - **Codex**: Hooks must be **approved** before they run—confirm when prompted or enable them in the **Codex plugin settings**.
 - **Cursor**: **Restart Cursor** after `init` so hook configuration reliably takes effect.
+- **Claude**: Review `.claude/settings.json` after `init` and restart Claude Code if needed.
 
 ## `npx` vs `--mode prod`
 
@@ -105,12 +112,30 @@ agent-profiler audit context
 
 ## Commands
 
-- `agent-profiler init <cursor|codex>`: install hook wiring for a supported source
-- `agent-profiler hook <source> <eventName>`: ingest one hook payload from stdin
+- `agent-profiler init <cursor|codex|claude>`: install hook wiring for a supported source
+- `agent-profiler hook <source> <eventName>`: ingest one hook payload from stdin (`source`: `cursor`, `codex`, `claude`, `opencode`)
 - `agent-profiler status`: inspect local setup and ingest state
 - `agent-profiler last`: summarize the most recent observed session
 - `agent-profiler dashboard`: serve the local dashboard (SQLite + context audit)
 - `agent-profiler audit context`: estimate always-on context token footprint
+
+## Hook mappings
+
+Agent Profiler normalizes source hooks into a canonical lifecycle contract so
+cross-source telemetry remains comparable.
+
+| Canonical lifecycle event | Cursor hook(s)                     | Codex hook         | Claude hook          | OpenCode plugin event  |
+| ------------------------- | ---------------------------------- | ------------------ | -------------------- | ---------------------- |
+| `SessionStart`            | `start`, `sessionStart`            | `SessionStart`     | `SessionStart`       | `session.created`      |
+| `UserPromptSubmit`        | `beforeSubmitPrompt`               | `UserPromptSubmit` | `UserPromptSubmit`   | `message.updated.user` |
+| `PreToolUse`              | `preToolUse`, `beforeMCPExecution` | `PreToolUse`       | `PreToolUse`         | `tool.execute.before`  |
+| `PostToolUse`             | `postToolUse`, `afterMCPExecution` | `PostToolUse`      | `PostToolUse`        | `tool.execute.after`   |
+| `PostToolUseFailure`      | `postToolUseFailure`               | —                  | `PostToolUseFailure` | `tool.execute.failure` |
+| `Stop`                    | `stop`, `sessionEnd`               | `Stop`             | `Stop`               | `session.idle`         |
+
+Version-specific mapping profiles are managed by a central registry so hook
+pinning can evolve per platform without mutating historical raw payload data.
+See `docs/decisions/telemetry/ADR-008-govern-hook-mappings-as-a-versioned-telemetry-contract.md`.
 
 ## Releases
 

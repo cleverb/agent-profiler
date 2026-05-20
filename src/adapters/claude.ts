@@ -21,7 +21,7 @@ function asRecord(value: unknown): Record<string, unknown> {
   return {};
 }
 
-function stringifyToolPayload(value: unknown): string {
+function stringifyJsonish(value: unknown): string {
   if (value === undefined || value === null) return "";
   if (typeof value === "string") return value;
   try {
@@ -56,68 +56,69 @@ function estimateTokensForRole(
   return { estimatedInputTokens, estimatedOutputTokens };
 }
 
-export function normalizeCodexEvent(
+export function normalizeClaudeEvent(
   eventName: string,
   rawPayload: unknown,
 ): NormalizedAgentEvent {
   const payload = asRecord(rawPayload);
   const mapped = resolveMappedHook(
-    "codex",
+    "claude-code",
     pickFirstString([payload.hook_event_name]) ?? eventName,
-    pickFirstString([payload.codex_version, payload.codexVersion]),
+    pickFirstString([payload.claude_version, payload.claudeVersion]),
   );
-  const cwd = pickFirstString([payload.cwd]);
-  const sessionId = pickFirstString([payload.session_id]);
-  const turnId = pickFirstString([payload.turn_id]);
-  const model = pickFirstString([payload.model]);
 
   let role: AgentEventRole = mapped.role;
   let observableText = "";
 
-  switch (eventName) {
+  switch (mapped.canonicalEvent) {
     case "SessionStart": {
       role = "session_start";
-      observableText = pickFirstString([payload.source]) ?? "";
+      observableText = pickFirstString([payload.source, payload.cwd]) ?? "";
       break;
     }
     case "UserPromptSubmit": {
       role = "user_prompt";
-      observableText = pickFirstString([payload.prompt]) ?? "";
+      observableText = pickFirstString([payload.prompt, payload.text]) ?? "";
       break;
     }
     case "PreToolUse": {
       role = "tool_call";
-      const toolName = pickFirstString([payload.tool_name]) ?? "";
-      observableText = [toolName, stringifyToolPayload(payload.tool_input)]
+      const toolName =
+        pickFirstString([payload.tool_name, payload.toolName]) ?? "";
+      observableText = [toolName, stringifyJsonish(payload.tool_input)]
         .filter(Boolean)
         .join("\n");
       break;
     }
     case "PostToolUse": {
-      const toolName = (pickFirstString([payload.tool_name]) ?? "").trim();
-      const responseStr = stringifyToolPayload(payload.tool_response);
+      const toolName = (
+        pickFirstString([payload.tool_name, payload.toolName]) ?? ""
+      ).trim();
+      const responseStr = stringifyJsonish(payload.tool_response);
       observableText = [toolName, responseStr].filter(Boolean).join("\n");
-      const lower = toolName.toLowerCase();
-      if (toolName === "Bash" || lower === "bash") {
+      if (toolName.toLowerCase() === "bash") {
         role = "shell_output";
-      } else if (
-        toolName === "apply_patch" ||
-        toolName === "Edit" ||
-        toolName === "Write"
-      ) {
-        role = "file_edit";
       } else {
         role = "tool_result";
       }
       break;
     }
+    case "PostToolUseFailure": {
+      role = "tool_failure";
+      observableText = stringifyJsonish(
+        payload.error ?? payload.tool_response ?? payload.tool_output,
+      );
+      break;
+    }
     case "Stop": {
       role = "session_stop";
-      observableText = pickFirstString([payload.last_assistant_message]) ?? "";
+      observableText =
+        pickFirstString([payload.last_assistant_message, payload.message]) ??
+        "";
       break;
     }
     default: {
-      observableText = stringifyToolPayload(rawPayload);
+      observableText = stringifyJsonish(rawPayload);
     }
   }
 
@@ -127,11 +128,20 @@ export function normalizeCodexEvent(
   );
 
   return {
-    source: "codex",
+    source: "claude-code",
     sourceEvent: mapped.canonicalEvent,
-    repoPath: cwd,
-    sessionId,
-    turnId,
+    repoPath: pickFirstString([
+      payload.cwd,
+      payload.repo_path,
+      payload.repoPath,
+    ]),
+    sessionId: pickFirstString([payload.session_id, payload.sessionId]),
+    turnId: pickFirstString([
+      payload.turn_id,
+      payload.turnId,
+      payload.generation_id,
+      payload.generationId,
+    ]),
     conversationId: pickFirstString([
       payload.conversation_id,
       payload.conversationId,
@@ -140,7 +150,7 @@ export function normalizeCodexEvent(
       payload.generation_id,
       payload.generationId,
     ]),
-    model,
+    model: pickFirstString([payload.model]),
     role,
     observableText,
     estimatedInputTokens,
