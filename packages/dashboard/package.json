@@ -12,7 +12,7 @@
     "@rollup/plugin-typescript": "^12.1.2",
     "rollup": "^4.40.0",
     "sass": "^1.99.0",
-    "typescript": "^5.0.0"
+    "typescript": "^6.0.3"
   },
   "dependencies": {
     "chart.js": "^4.5.1"
