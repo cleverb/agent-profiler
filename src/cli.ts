@@ -4,7 +4,7 @@ import {
   getAuditContextReport,
   runAuditContext,
 } from "./commands/auditContext.js";
-import { runHook } from "./commands/hook.js";
+import { runHook, type HookSource } from "./commands/hook.js";
 import { runDashboard } from "./commands/dashboard.js";
 import { runInit, type InitSource } from "./commands/init.js";
 import { getLastReport, runLast } from "./commands/last.js";
@@ -21,14 +21,14 @@ program
 program
   .command("init")
   .description("Initialize Agent Profiler for a supported source.")
-  .argument("<source>", "supported: cursor | codex")
+  .argument("<source>", "supported: cursor | codex | claude")
   .option(
     "--mode <mode>",
     "init mode: dev or prod (prod requires `agent-profiler` on PATH)",
     "dev",
   )
   .action((source: string, options: { mode?: string }) => {
-    const allowed: InitSource[] = ["cursor", "codex"];
+    const allowed: InitSource[] = ["cursor", "codex", "claude"];
     if (!allowed.includes(source as InitSource)) {
       console.error(`Unsupported source: ${source}`);
       process.exitCode = 1;
@@ -52,18 +52,18 @@ program
 program
   .command("hook")
   .description("Ingest a hook event from an adapter.")
-  .argument("<source>", "adapter source: cursor | codex")
+  .argument("<source>", "adapter source: cursor | codex | claude | opencode")
   .argument("<eventName>", "source event name")
   .action(async (source: string, eventName: string) => {
-    const allowed: InitSource[] = ["cursor", "codex"];
-    if (!allowed.includes(source as InitSource)) {
+    const allowed: HookSource[] = ["cursor", "codex", "claude", "opencode"];
+    if (!allowed.includes(source as HookSource)) {
       console.error(`Unsupported source: ${source}`);
       process.exitCode = 1;
       return;
     }
 
     try {
-      await runHook(source as InitSource, eventName);
+      await runHook(source as HookSource, eventName);
     } catch (error) {
       console.error("Failed to process hook event.");
       console.error(error);

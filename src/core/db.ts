@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
 import { getConfiguredDatabasePath } from "./profile.js";
+import { backfillAgentExecutionCatalog } from "./agentExecutionDb.js";
 import type { DerivedIngestFields } from "./eventMetadata.js";
 import type { NormalizedAgentEvent } from "./normalize.js";
 import type { WorkspaceGitMeta } from "./gitWorkspace.js";
@@ -43,6 +44,12 @@ type ColumnMigration = {
 type IngestProvenance = {
   ingestedByVersion: string;
   normalizationVersion: number;
+};
+
+export type SessionCarryForwardContext = {
+  model: string | null;
+  repoPath: string | null;
+  conversationId: string | null;
 };
 
 export function resolveWritableDbPath(dbPath: string): string {
@@ -86,7 +93,22 @@ export function applySchema(db: SqliteDatabase): void {
   db.exec(schemaSql);
   migrateEventsSchema(db);
   migrateInteractionSpansSchema(db);
+  migrateAgentExecutionSchema(db);
   applyDataFidelityFixes(db);
+}
+
+function migrateAgentExecutionSchema(db: SqliteDatabase): void {
+  migrateTableColumns(db, "events", [
+    {
+      name: "execution_instance_id",
+      sql: `ALTER TABLE events ADD COLUMN execution_instance_id INTEGER`,
+    },
+  ]);
+
+  db.exec(
+    `CREATE INDEX IF NOT EXISTS idx_events_execution_instance
+     ON events(execution_instance_id, created_at)`,
+  );
 }
 
 function migrateTableColumns(
@@ -300,6 +322,7 @@ export function insertEvent(
   workspaceGit: WorkspaceGitMeta,
   derived: DerivedIngestFields,
   provenance: IngestProvenance,
+  executionInstanceId: number | null = null,
 ): number {
   // Keep raw payloads verbatim for forensics and stable hashes; path redaction is a
   // separate privacy decision from the derived `~/...` metadata stored alongside them.
@@ -337,9 +360,10 @@ export function insertEvent(
       mcp_server,
       mcp_tool,
       payload_byte_length,
-      prompt_fingerprint
+      prompt_fingerprint,
+      execution_instance_id
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const info = stmt.run(
@@ -375,9 +399,60 @@ export function insertEvent(
     derived.mcpTool,
     derived.payloadByteLength,
     derived.promptFingerprint,
+    executionInstanceId,
   ) as { lastInsertRowid: number | bigint };
 
   return Number(info.lastInsertRowid);
+}
+
+/**
+ * Returns last-known session-scoped context values safe for carry-forward.
+ * @see ADR-008
+ */
+export function getLatestSessionCarryForwardContext(
+  db: SqliteDatabase,
+  source: string,
+  sessionId: string,
+): SessionCarryForwardContext {
+  const row = db
+    .prepare(
+      `
+      SELECT
+        (
+          SELECT model
+          FROM events
+          WHERE source = ? AND session_id = ?
+            AND model IS NOT NULL AND LENGTH(TRIM(model)) > 0
+          ORDER BY id DESC
+          LIMIT 1
+        ) AS model,
+        (
+          SELECT repo_path
+          FROM events
+          WHERE source = ? AND session_id = ?
+            AND repo_path IS NOT NULL AND LENGTH(TRIM(repo_path)) > 0
+          ORDER BY id DESC
+          LIMIT 1
+        ) AS repoPath,
+        (
+          SELECT conversation_id
+          FROM events
+          WHERE source = ? AND session_id = ?
+            AND conversation_id IS NOT NULL AND LENGTH(TRIM(conversation_id)) > 0
+          ORDER BY id DESC
+          LIMIT 1
+        ) AS conversationId
+      `,
+    )
+    .get(source, sessionId, source, sessionId, source, sessionId) as
+    | SessionCarryForwardContext
+    | undefined;
+
+  return {
+    model: row?.model ?? null,
+    repoPath: row?.repoPath ?? null,
+    conversationId: row?.conversationId ?? null,
+  };
 }
 
 function hasDataFix(db: SqliteDatabase, name: string): boolean {
@@ -394,103 +469,214 @@ function recordDataFix(db: SqliteDatabase, name: string): void {
 }
 
 function applyDataFidelityFixes(db: SqliteDatabase): void {
-  const fixName = "2026-05-16-cursor-id-and-event-backfill-v1";
-  if (hasDataFix(db, fixName)) return;
+  const cursorFixName = "2026-05-16-cursor-id-and-event-backfill-v1";
+  if (!hasDataFix(db, cursorFixName)) {
+    db.exec(`
+      UPDATE events
+      SET
+        session_id = COALESCE(
+          NULLIF(TRIM(session_id), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.session_id')), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.sessionId')), '')
+        ),
+        turn_id = COALESCE(
+          NULLIF(TRIM(turn_id), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.turn_id')), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.turnId')), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.generation_id')), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.generationId')), '')
+        ),
+        conversation_id = COALESCE(
+          NULLIF(TRIM(conversation_id), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.conversation_id')), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.conversationId')), '')
+        ),
+        generation_id = COALESCE(
+          NULLIF(TRIM(generation_id), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.generation_id')), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.generationId')), '')
+        ),
+        source_event = CASE source_event
+          WHEN 'start' THEN 'SessionStart'
+          WHEN 'sessionStart' THEN 'SessionStart'
+          WHEN 'beforeSubmitPrompt' THEN 'UserPromptSubmit'
+          WHEN 'preToolUse' THEN 'PreToolUse'
+          WHEN 'postToolUse' THEN 'PostToolUse'
+          WHEN 'postToolUseFailure' THEN 'PostToolUseFailure'
+          WHEN 'beforeMCPExecution' THEN 'PreToolUse'
+          WHEN 'afterMCPExecution' THEN 'PostToolUse'
+          WHEN 'beforeShellExecution' THEN 'BeforeShellExecution'
+          WHEN 'afterShellExecution' THEN 'AfterShellExecution'
+          WHEN 'beforeReadFile' THEN 'BeforeReadFile'
+          WHEN 'afterFileEdit' THEN 'AfterFileEdit'
+          WHEN 'afterAgentThought' THEN 'AfterAgentThought'
+          WHEN 'afterAgentResponse' THEN 'AfterAgentResponse'
+          WHEN 'stop' THEN 'Stop'
+          WHEN 'sessionEnd' THEN 'Stop'
+          WHEN 'preCompact' THEN 'PreCompact'
+          ELSE source_event
+        END
+      WHERE source = 'cursor'
+    `);
 
-  db.exec(`
-    UPDATE events
-    SET
-      session_id = COALESCE(
-        NULLIF(TRIM(session_id), ''),
-        NULLIF(TRIM(json_extract(raw_payload, '$.session_id')), ''),
-        NULLIF(TRIM(json_extract(raw_payload, '$.sessionId')), '')
-      ),
-      turn_id = COALESCE(
-        NULLIF(TRIM(turn_id), ''),
-        NULLIF(TRIM(json_extract(raw_payload, '$.turn_id')), ''),
-        NULLIF(TRIM(json_extract(raw_payload, '$.turnId')), ''),
-        NULLIF(TRIM(json_extract(raw_payload, '$.generation_id')), ''),
-        NULLIF(TRIM(json_extract(raw_payload, '$.generationId')), '')
-      ),
-      conversation_id = COALESCE(
-        NULLIF(TRIM(conversation_id), ''),
-        NULLIF(TRIM(json_extract(raw_payload, '$.conversation_id')), ''),
-        NULLIF(TRIM(json_extract(raw_payload, '$.conversationId')), '')
-      ),
-      generation_id = COALESCE(
-        NULLIF(TRIM(generation_id), ''),
-        NULLIF(TRIM(json_extract(raw_payload, '$.generation_id')), ''),
-        NULLIF(TRIM(json_extract(raw_payload, '$.generationId')), '')
-      ),
-      source_event = CASE source_event
-        WHEN 'start' THEN 'SessionStart'
-        WHEN 'sessionStart' THEN 'SessionStart'
-        WHEN 'beforeSubmitPrompt' THEN 'UserPromptSubmit'
-        WHEN 'preToolUse' THEN 'PreToolUse'
-        WHEN 'postToolUse' THEN 'PostToolUse'
-        WHEN 'postToolUseFailure' THEN 'PostToolUseFailure'
-        WHEN 'beforeMCPExecution' THEN 'PreToolUse'
-        WHEN 'afterMCPExecution' THEN 'PostToolUse'
-        WHEN 'beforeShellExecution' THEN 'BeforeShellExecution'
-        WHEN 'afterShellExecution' THEN 'AfterShellExecution'
-        WHEN 'beforeReadFile' THEN 'BeforeReadFile'
-        WHEN 'afterFileEdit' THEN 'AfterFileEdit'
-        WHEN 'afterAgentThought' THEN 'AfterAgentThought'
-        WHEN 'afterAgentResponse' THEN 'AfterAgentResponse'
-        WHEN 'stop' THEN 'Stop'
-        WHEN 'sessionEnd' THEN 'Stop'
-        WHEN 'preCompact' THEN 'PreCompact'
-        ELSE source_event
+    db.exec(`
+      UPDATE events
+      SET interaction_kind = CASE source_event
+        WHEN 'SessionStart' THEN 'session_start'
+        WHEN 'UserPromptSubmit' THEN 'user_prompt_submit'
+        WHEN 'PreToolUse' THEN 'tool_request'
+        WHEN 'PostToolUse' THEN 'tool_result_event'
+        WHEN 'PostToolUseFailure' THEN 'tool_failure_event'
+        WHEN 'BeforeShellExecution' THEN 'shell_command_request'
+        WHEN 'AfterShellExecution' THEN 'shell_output'
+        WHEN 'BeforeReadFile' THEN 'file_read_request'
+        WHEN 'AfterFileEdit' THEN 'file_edit'
+        WHEN 'AfterAgentResponse' THEN 'model_output'
+        WHEN 'AfterAgentThought' THEN 'model_thought'
+        WHEN 'PreCompact' THEN 'context_compact'
+        WHEN 'Stop' THEN 'session_stop'
+        ELSE interaction_kind
       END
-    WHERE source = 'cursor'
-  `);
+      WHERE source = 'cursor'
+    `);
 
-  db.exec(`
-    UPDATE events
-    SET interaction_kind = CASE source_event
-      WHEN 'SessionStart' THEN 'session_start'
-      WHEN 'UserPromptSubmit' THEN 'user_prompt_submit'
-      WHEN 'PreToolUse' THEN 'tool_request'
-      WHEN 'PostToolUse' THEN 'tool_result_event'
-      WHEN 'PostToolUseFailure' THEN 'tool_failure_event'
-      WHEN 'BeforeShellExecution' THEN 'shell_command_request'
-      WHEN 'AfterShellExecution' THEN 'shell_output'
-      WHEN 'BeforeReadFile' THEN 'file_read_request'
-      WHEN 'AfterFileEdit' THEN 'file_edit'
-      WHEN 'AfterAgentResponse' THEN 'model_output'
-      WHEN 'AfterAgentThought' THEN 'model_thought'
-      WHEN 'PreCompact' THEN 'context_compact'
-      WHEN 'Stop' THEN 'session_stop'
-      ELSE interaction_kind
-    END
-    WHERE source = 'cursor'
-  `);
+    db.exec(`
+      UPDATE interaction_spans
+      SET
+        turn_id = COALESCE(
+          NULLIF(TRIM(turn_id), ''),
+          NULLIF(TRIM((SELECT e.turn_id FROM events e WHERE e.id = pre_event_id)), ''),
+          NULLIF(TRIM((SELECT e.turn_id FROM events e WHERE e.id = post_event_id)), ''),
+          NULLIF(TRIM((SELECT e.turn_id FROM events e WHERE e.id = failure_event_id)), '')
+        ),
+        conversation_id = COALESCE(
+          NULLIF(TRIM(conversation_id), ''),
+          NULLIF(TRIM((SELECT e.conversation_id FROM events e WHERE e.id = pre_event_id)), ''),
+          NULLIF(TRIM((SELECT e.conversation_id FROM events e WHERE e.id = post_event_id)), ''),
+          NULLIF(TRIM((SELECT e.conversation_id FROM events e WHERE e.id = failure_event_id)), '')
+        ),
+        generation_id = COALESCE(
+          NULLIF(TRIM(generation_id), ''),
+          NULLIF(TRIM((SELECT e.generation_id FROM events e WHERE e.id = pre_event_id)), ''),
+          NULLIF(TRIM((SELECT e.generation_id FROM events e WHERE e.id = post_event_id)), ''),
+          NULLIF(TRIM((SELECT e.generation_id FROM events e WHERE e.id = failure_event_id)), '')
+        )
+      WHERE source = 'cursor'
+    `);
 
-  db.exec(`
-    UPDATE interaction_spans
-    SET
-      turn_id = COALESCE(
-        NULLIF(TRIM(turn_id), ''),
-        NULLIF(TRIM((SELECT e.turn_id FROM events e WHERE e.id = pre_event_id)), ''),
-        NULLIF(TRIM((SELECT e.turn_id FROM events e WHERE e.id = post_event_id)), ''),
-        NULLIF(TRIM((SELECT e.turn_id FROM events e WHERE e.id = failure_event_id)), '')
-      ),
-      conversation_id = COALESCE(
-        NULLIF(TRIM(conversation_id), ''),
-        NULLIF(TRIM((SELECT e.conversation_id FROM events e WHERE e.id = pre_event_id)), ''),
-        NULLIF(TRIM((SELECT e.conversation_id FROM events e WHERE e.id = post_event_id)), ''),
-        NULLIF(TRIM((SELECT e.conversation_id FROM events e WHERE e.id = failure_event_id)), '')
-      ),
-      generation_id = COALESCE(
-        NULLIF(TRIM(generation_id), ''),
-        NULLIF(TRIM((SELECT e.generation_id FROM events e WHERE e.id = pre_event_id)), ''),
-        NULLIF(TRIM((SELECT e.generation_id FROM events e WHERE e.id = post_event_id)), ''),
-        NULLIF(TRIM((SELECT e.generation_id FROM events e WHERE e.id = failure_event_id)), '')
-      )
-    WHERE source = 'cursor'
-  `);
+    recordDataFix(db, cursorFixName);
+  }
 
-  recordDataFix(db, fixName);
+  const opencodeFixName = "2026-05-20-opencode-properties-backfill-v1";
+  if (!hasDataFix(db, opencodeFixName)) {
+    db.exec(`
+      UPDATE events
+      SET
+        session_id = COALESCE(
+          NULLIF(TRIM(session_id), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.session_id')), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.sessionId')), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.opencode_session_id')), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.properties.sessionID')), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.properties.sessionId')), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.properties.info.sessionID')), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.properties.info.sessionId')), '')
+        ),
+        repo_path = COALESCE(
+          NULLIF(TRIM(repo_path), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.repo_path')), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.repoPath')), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.cwd')), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.directory')), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.worktree')), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.properties.info.path.cwd')), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.properties.info.path.root')), '')
+        ),
+        model = COALESCE(
+          NULLIF(TRIM(model), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.model')), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.properties.info.modelID')), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.properties.info.modelId')), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.properties.info.model.modelID')), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.properties.info.model.modelId')), '')
+        ),
+        turn_id = COALESCE(
+          NULLIF(TRIM(turn_id), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.turn_id')), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.turnId')), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.message_id')), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.properties.info.id')), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.properties.info.parentID')), ''),
+          NULLIF(TRIM(json_extract(raw_payload, '$.properties.info.parentId')), '')
+        ),
+        source_event = CASE source_event
+          WHEN 'session.created' THEN 'SessionStart'
+          WHEN 'session.idle' THEN 'Stop'
+          WHEN 'tool.execute.before' THEN 'PreToolUse'
+          WHEN 'tool.execute.after' THEN 'PostToolUse'
+          WHEN 'tool.execute.failure' THEN 'PostToolUseFailure'
+          WHEN 'file.edited' THEN 'AfterFileEdit'
+          WHEN 'command.executed' THEN 'AfterShellExecution'
+          WHEN 'message.updated.user' THEN 'UserPromptSubmit'
+          WHEN 'message.updated.assistant' THEN 'AfterAgentResponse'
+          WHEN 'message.updated' THEN CASE
+            WHEN LOWER(COALESCE(
+              json_extract(raw_payload, '$.properties.info.role'),
+              json_extract(raw_payload, '$.role'),
+              ''
+            )) = 'user' THEN 'UserPromptSubmit'
+            ELSE 'AfterAgentResponse'
+          END
+          ELSE source_event
+        END,
+        role = CASE
+          WHEN source_event = 'session.created' THEN 'session_start'
+          WHEN source_event = 'session.idle' THEN 'session_stop'
+          WHEN source_event = 'tool.execute.before' THEN 'tool_call'
+          WHEN source_event = 'tool.execute.after' THEN 'tool_result'
+          WHEN source_event = 'tool.execute.failure' THEN 'tool_failure'
+          WHEN source_event = 'file.edited' THEN 'file_edit'
+          WHEN source_event = 'command.executed' THEN 'shell_output'
+          WHEN source_event = 'message.updated.user' THEN 'user_prompt'
+          WHEN source_event = 'message.updated.assistant' THEN 'assistant_output'
+          WHEN source_event = 'message.updated' THEN CASE
+            WHEN LOWER(COALESCE(
+              json_extract(raw_payload, '$.properties.info.role'),
+              json_extract(raw_payload, '$.role'),
+              ''
+            )) = 'user' THEN 'user_prompt'
+            ELSE 'assistant_output'
+          END
+          ELSE role
+        END
+      WHERE source = 'opencode'
+    `);
+
+    db.exec(`
+      UPDATE events
+      SET interaction_kind = CASE source_event
+        WHEN 'SessionStart' THEN 'session_start'
+        WHEN 'UserPromptSubmit' THEN 'user_prompt_submit'
+        WHEN 'PreToolUse' THEN 'tool_request'
+        WHEN 'PostToolUse' THEN 'tool_result_event'
+        WHEN 'PostToolUseFailure' THEN 'tool_failure_event'
+        WHEN 'AfterShellExecution' THEN 'shell_output'
+        WHEN 'AfterFileEdit' THEN 'file_edit'
+        WHEN 'AfterAgentResponse' THEN 'model_output'
+        WHEN 'Stop' THEN 'session_stop'
+        ELSE interaction_kind
+      END
+      WHERE source = 'opencode'
+    `);
+
+    recordDataFix(db, opencodeFixName);
+  }
+
+  const agentCatalogFixName = "2026-05-20-agent-execution-catalog-v1";
+  if (!hasDataFix(db, agentCatalogFixName)) {
+    backfillAgentExecutionCatalog(db);
+    recordDataFix(db, agentCatalogFixName);
+  }
 }
 
 type SpanRow = {

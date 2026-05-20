@@ -1,6 +1,8 @@
 import crypto from "node:crypto";
+import { normalizeClaudeEvent } from "../adapters/claude.js";
 import { normalizeCodexEvent } from "../adapters/codex.js";
 import { normalizeCursorEvent } from "../adapters/cursor.js";
+import { normalizeOpenCodeEvent } from "../adapters/opencode.js";
 import {
   resolveHookWorkspacePath,
   resolveWorkspaceGitMeta,
@@ -10,7 +12,12 @@ import {
   type TelemetryHookSource,
 } from "../core/eventMetadata.js";
 import {
+  recordAgentExecutionOnIngest,
+  setEventExecutionInstanceId,
+} from "../core/agentExecutionDb.js";
+import {
   getDefaultDbPath,
+  getLatestSessionCarryForwardContext,
   insertEvent,
   mergeInteractionSpan,
   openDb,
@@ -20,6 +27,27 @@ import type { NormalizedAgentEvent } from "../core/normalize.js";
 import { getIngestVersion } from "../core/packageMeta.js";
 
 const NORMALIZATION_VERSION = 2;
+
+/**
+ * Applies safe session-level carry-forward fields when current payload omits them.
+ * @see ADR-008
+ */
+function applySessionCarryForward(
+  normalized: NormalizedAgentEvent,
+  prior: {
+    model: string | null;
+    repoPath: string | null;
+    conversationId: string | null;
+  },
+): NormalizedAgentEvent {
+  return {
+    ...normalized,
+    model: normalized.model ?? prior.model ?? undefined,
+    repoPath: normalized.repoPath ?? prior.repoPath ?? undefined,
+    conversationId:
+      normalized.conversationId ?? prior.conversationId ?? undefined,
+  };
+}
 
 function readStdin(): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -43,8 +71,10 @@ function parseRawPayload(stdinText: string): unknown {
   }
 }
 
+export type HookSource = InitSource | "opencode";
+
 function normalizeEvent(
-  source: InitSource,
+  source: HookSource,
   eventName: string,
   rawPayload: unknown,
 ): NormalizedAgentEvent {
@@ -53,6 +83,12 @@ function normalizeEvent(
   }
   if (source === "codex") {
     return normalizeCodexEvent(eventName, rawPayload);
+  }
+  if (source === "claude") {
+    return normalizeClaudeEvent(eventName, rawPayload);
+  }
+  if (source === "opencode") {
+    return normalizeOpenCodeEvent(eventName, rawPayload);
   }
 
   return {
@@ -75,13 +111,13 @@ function hashPayload(payload: unknown): string {
 }
 
 /** Codex Stop hook requires JSON on stdout; see OpenAI Codex hooks docs. */
-function writeCodexHookAck(source: InitSource, eventName: string): void {
+function writeCodexHookAck(source: HookSource, eventName: string): void {
   if (source !== "codex" || eventName !== "Stop") return;
   process.stdout.write(`${JSON.stringify({ continue: true })}\n`);
 }
 
 export async function runHook(
-  source: InitSource,
+  source: HookSource,
   eventName: string,
 ): Promise<void> {
   const stdinText = await readStdin();
@@ -91,21 +127,31 @@ export async function runHook(
 
   const db = openDb(getDefaultDbPath());
   try {
+    const priorContext =
+      normalized.sessionId && normalized.sessionId.trim().length > 0
+        ? getLatestSessionCarryForwardContext(
+            db,
+            normalized.source,
+            normalized.sessionId,
+          )
+        : { model: null, repoPath: null, conversationId: null };
+    const carried = applySessionCarryForward(normalized, priorContext);
+
     const workspacePath = resolveHookWorkspacePath(
-      normalized.repoPath,
+      carried.repoPath,
       rawPayload,
     );
     const workspaceGit = resolveWorkspaceGitMeta(workspacePath);
     const derived = deriveIngestFields(
-      source as TelemetryHookSource,
-      normalized.sourceEvent,
+      carried.source as TelemetryHookSource,
+      carried.sourceEvent,
       rawPayload,
       stdinText,
-      normalized,
+      carried,
     );
     const eventId = insertEvent(
       db,
-      normalized,
+      carried,
       payloadHash,
       workspaceGit,
       derived,
@@ -114,7 +160,22 @@ export async function runHook(
         normalizationVersion: NORMALIZATION_VERSION,
       },
     );
-    mergeInteractionSpan(db, eventId, normalized, workspaceGit, derived);
+
+    /** Links Task/Subagent delegations to execution_instances. @see ADR-009 */
+    const executionInstanceId = recordAgentExecutionOnIngest(
+      db,
+      eventId,
+      carried.source,
+      carried.sourceEvent,
+      rawPayload,
+      derived,
+      carried,
+    );
+    if (executionInstanceId !== null) {
+      setEventExecutionInstanceId(db, eventId, executionInstanceId);
+    }
+
+    mergeInteractionSpan(db, eventId, carried, workspaceGit, derived);
   } finally {
     db.close();
   }

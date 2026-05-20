@@ -80,3 +80,56 @@ CREATE TABLE IF NOT EXISTS data_fix_versions (
   name TEXT NOT NULL UNIQUE,
   applied_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS agent_profiles (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  profile_key TEXT NOT NULL UNIQUE,
+  source TEXT NOT NULL,
+  actor_kind TEXT NOT NULL,
+  specialization TEXT NOT NULL,
+  display_label TEXT,
+  first_seen_at TEXT NOT NULL,
+  last_seen_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS agent_profile_observations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  agent_profile_id INTEGER NOT NULL,
+  config_fingerprint TEXT NOT NULL,
+  config_json TEXT NOT NULL,
+  observed_at TEXT NOT NULL,
+  last_seen_at TEXT NOT NULL,
+  raw_evidence_event_id INTEGER,
+  UNIQUE(agent_profile_id, config_fingerprint),
+  FOREIGN KEY (agent_profile_id) REFERENCES agent_profiles(id)
+);
+
+CREATE TABLE IF NOT EXISTS execution_instances (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  agent_profile_id INTEGER NOT NULL,
+  observation_id INTEGER NOT NULL,
+  source TEXT NOT NULL,
+  session_id TEXT,
+  conversation_id TEXT,
+  turn_id TEXT,
+  parent_instance_id INTEGER,
+  delegation_correlation_id TEXT,
+  transcript_path TEXT,
+  started_at TEXT NOT NULL,
+  ended_at TEXT,
+  FOREIGN KEY (agent_profile_id) REFERENCES agent_profiles(id),
+  FOREIGN KEY (observation_id) REFERENCES agent_profile_observations(id),
+  FOREIGN KEY (parent_instance_id) REFERENCES execution_instances(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_profiles_source
+ON agent_profiles(source, last_seen_at);
+
+CREATE INDEX IF NOT EXISTS idx_agent_observations_profile
+ON agent_profile_observations(agent_profile_id, last_seen_at);
+
+CREATE INDEX IF NOT EXISTS idx_execution_instances_correlation
+ON execution_instances(source, delegation_correlation_id, ended_at);
+
+CREATE INDEX IF NOT EXISTS idx_execution_instances_session
+ON execution_instances(session_id, started_at);

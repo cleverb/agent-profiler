@@ -30,7 +30,7 @@ function ensureProfilerGitignore(projectRoot: string): void {
   fs.appendFileSync(gitignorePath, `${suffix}\n${block}`, "utf8");
 }
 
-export type InitSource = "cursor" | "codex";
+export type InitSource = "cursor" | "codex" | "claude";
 
 type CursorAdapterConfig = {
   enabled: boolean;
@@ -43,6 +43,7 @@ type AgentProfilerConfig = {
   adapters: Partial<{
     cursor: CursorAdapterConfig;
     codex: CursorAdapterConfig;
+    claude: CursorAdapterConfig;
   }>;
   databasePath: string;
   updatedAt: string;
@@ -58,6 +59,7 @@ type CursorIdeHooksConfig = {
 type CodexHookHandler = { type?: string; command?: string; timeout?: number };
 type CodexHookGroup = { matcher?: string; hooks?: CodexHookHandler[] };
 type CodexHooksFile = { hooks?: Record<string, CodexHookGroup[]> };
+type ClaudeHooksSettings = { hooks?: Record<string, CodexHookGroup[]> };
 
 const CURSOR_EVENTS = [
   "beforeSubmitPrompt",
@@ -80,6 +82,15 @@ const CODEX_EVENTS = [
   "UserPromptSubmit",
   "PreToolUse",
   "PostToolUse",
+  "Stop",
+] as const;
+
+const CLAUDE_EVENTS = [
+  "SessionStart",
+  "UserPromptSubmit",
+  "PreToolUse",
+  "PostToolUse",
+  "PostToolUseFailure",
   "Stop",
 ] as const;
 
@@ -136,6 +147,12 @@ function resolveCursorHookFile(): string {
 
 function resolveCodexDir(): string {
   const local = path.join(process.cwd(), ".codex");
+  ensureDir(local);
+  return local;
+}
+
+function resolveClaudeDir(): string {
+  const local = path.join(process.cwd(), ".claude");
   ensureDir(local);
   return local;
 }
@@ -229,6 +246,45 @@ function mergeCodexProfilerHooks(
   }
 
   writeJsonFile(hooksFile, file);
+}
+
+function mergeClaudeProfilerHooks(
+  settingsFile: string,
+  mode: "dev" | "prod",
+): void {
+  const existingRaw = readJsonFile<unknown>(settingsFile);
+  const file: ClaudeHooksSettings =
+    existingRaw &&
+    typeof existingRaw === "object" &&
+    !Array.isArray(existingRaw) &&
+    "hooks" in (existingRaw as object)
+      ? (existingRaw as ClaudeHooksSettings)
+      : { hooks: {} };
+
+  file.hooks = { ...(file.hooks ?? {}) };
+
+  for (const eventName of CLAUDE_EVENTS) {
+    const marker = profilerMarkerSubcommand("claude", eventName);
+    const groups = [...(file.hooks[eventName] ?? [])];
+    if (codexGroupHasProfilerCommand(groups, marker)) {
+      file.hooks[eventName] = groups;
+      continue;
+    }
+    const command = hookCommand(mode, "claude", eventName);
+    const needsMatcher =
+      eventName === "SessionStart" ||
+      eventName === "PreToolUse" ||
+      eventName === "PostToolUse" ||
+      eventName === "PostToolUseFailure";
+    const group: CodexHookGroup = {
+      ...(needsMatcher ? { matcher: "*" } : {}),
+      hooks: [{ type: "command", command }],
+    };
+    groups.push(group);
+    file.hooks[eventName] = groups;
+  }
+
+  writeJsonFile(settingsFile, file);
 }
 
 function ensureCodexHooksFeatureFlag(codexDir: string): void {
@@ -346,7 +402,7 @@ export function runInit(
     }
 
     console.log("Agent Profiler initialized for Cursor.");
-  } else {
+  } else if (source === "codex") {
     const codexDir = resolveCodexDir();
     ensureCodexHooksFeatureFlag(codexDir);
     hooksPath = path.join(codexDir, "hooks.json");
@@ -384,6 +440,44 @@ export function runInit(
     console.log("Agent Profiler initialized for Codex.");
     console.log(
       "Note:     Enable hooks in Codex if prompted; project .codex/ must be trusted.",
+    );
+  } else {
+    const claudeDir = resolveClaudeDir();
+    hooksPath = path.join(claudeDir, "settings.json");
+    mergeClaudeProfilerHooks(hooksPath, mode);
+    try {
+      writeProfilerConfigMerged(
+        configPath,
+        "claude",
+        {
+          enabled: true,
+          hookFile: hooksPath,
+          mode,
+          initializedAt: "",
+        },
+        resolvedDbPath,
+      );
+    } catch {
+      const localConfigDir = getLocalProfileDir(process.cwd());
+      ensureDir(localConfigDir);
+      configPath = path.join(localConfigDir, "config.json");
+      writeProfilerConfigMerged(
+        configPath,
+        "claude",
+        {
+          enabled: true,
+          hookFile: hooksPath,
+          mode,
+          initializedAt: "",
+        },
+        resolvedDbPath,
+      );
+      usedFallbackConfigPath = true;
+    }
+
+    console.log("Agent Profiler initialized for Claude.");
+    console.log(
+      "Note:     Review .claude/settings.json hooks and restart Claude Code if needed.",
     );
   }
 

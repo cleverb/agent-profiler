@@ -20,6 +20,11 @@ type AgentProfilerConfig = {
       hookFile?: string;
       mode?: "dev" | "prod";
     };
+    claude?: {
+      enabled?: boolean;
+      hookFile?: string;
+      mode?: "dev" | "prod";
+    };
   };
   databasePath?: string;
 };
@@ -65,6 +70,15 @@ const REQUIRED_CODEX_EVENTS = [
   "UserPromptSubmit",
   "PreToolUse",
   "PostToolUse",
+  "Stop",
+];
+
+const REQUIRED_CLAUDE_EVENTS = [
+  "SessionStart",
+  "UserPromptSubmit",
+  "PreToolUse",
+  "PostToolUse",
+  "PostToolUseFailure",
   "Stop",
 ];
 
@@ -267,6 +281,80 @@ function getCodexSetupStatus(
   return { state: "yes", note: "configured via init" };
 }
 
+function getClaudeSetupStatus(
+  configPath: string,
+  mode: "dev" | "prod",
+): { state: string; note: string } {
+  const config = readJsonFile<AgentProfilerConfig>(configPath);
+  const claude = config?.adapters?.claude;
+  if (!claude?.enabled || !claude.hookFile) {
+    return { state: "not yet", note: "run `agent-profiler init claude`" };
+  }
+
+  const data = readJsonFile<CodexHooksFile>(claude.hookFile);
+  const hooks = data?.hooks ?? {};
+  const missing = REQUIRED_CLAUDE_EVENTS.filter(
+    (eventName) =>
+      !codexEventConfigured(hooks, eventName, `hook claude ${eventName}`),
+  );
+
+  if (missing.length > 0) {
+    return {
+      state: "partial",
+      note: `missing hooks: ${missing.join(", ")}`,
+    };
+  }
+
+  const userPromptGroups = hooks.UserPromptSubmit ?? [];
+  let sampleCommand = "";
+  outer: for (const g of userPromptGroups) {
+    for (const h of g.hooks ?? []) {
+      if (typeof h.command === "string" && h.command.includes("hook claude")) {
+        sampleCommand = h.command;
+        break outer;
+      }
+    }
+  }
+
+  if (!sampleCommand) {
+    return {
+      state: "partial",
+      note: "could not find agent-profiler command in Claude hooks",
+    };
+  }
+
+  if (mode === "dev") {
+    if (!sampleCommand.startsWith("node ")) {
+      return {
+        state: "partial",
+        note: "dev mode expects hooks to use `node <abs>/dist/cli.js ...`",
+      };
+    }
+    const cliPath = sampleCommand.split(" ")[1];
+    if (!cliPath || !fs.existsSync(cliPath)) {
+      return {
+        state: "partial",
+        note: "dev hook CLI path is missing or invalid",
+      };
+    }
+  } else {
+    if (!sampleCommand.startsWith("agent-profiler ")) {
+      return {
+        state: "partial",
+        note: "prod mode expects hooks to use `agent-profiler ...` from a real install on PATH",
+      };
+    }
+    if (!commandExistsInPath("agent-profiler")) {
+      return {
+        state: "partial",
+        note: "`agent-profiler` is not on PATH; `npx` only covers one-off commands",
+      };
+    }
+  }
+
+  return { state: "yes", note: "configured via init" };
+}
+
 function formatTimestamp(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;
@@ -289,6 +377,10 @@ export type StatusReport = {
       state: string;
       setup: string;
     };
+    claude: {
+      state: string;
+      setup: string;
+    };
   };
   lastEvent: {
     createdAt: string;
@@ -304,6 +396,7 @@ export function getStatusReport(mode: "dev" | "prod" = "dev"): StatusReport {
     resolveStatusPaths(mode);
   const cursorSetup = getCursorSetupStatus(configPath, mode);
   const codexSetup = getCodexSetupStatus(configPath, mode);
+  const claudeSetup = getClaudeSetupStatus(configPath, mode);
 
   let lastEvent = null;
   try {
@@ -328,6 +421,10 @@ export function getStatusReport(mode: "dev" | "prod" = "dev"): StatusReport {
       codex: {
         state: codexSetup.state,
         setup: codexSetup.note,
+      },
+      claude: {
+        state: claudeSetup.state,
+        setup: claudeSetup.note,
       },
     },
     lastEvent: lastEvent
@@ -359,6 +456,8 @@ export function runStatus(mode: "dev" | "prod" = "dev"): void {
   lines.push(`  setup: ${report.adapters.cursor.setup}`);
   lines.push(`  Codex: ${report.adapters.codex.state}`);
   lines.push(`  setup: ${report.adapters.codex.setup}`);
+  lines.push(`  Claude: ${report.adapters.claude.state}`);
+  lines.push(`  setup: ${report.adapters.claude.setup}`);
   lines.push("");
   lines.push("Last event:");
   if (report.lastEvent) {

@@ -27,6 +27,19 @@ Adopt a canonical hook identity model at ingest time while preserving raw payloa
 - Persist `conversation_id` and `generation_id` as first-class columns on `events` and `interaction_spans`.
 - Continue storing `raw_payload` verbatim for forensics and forward-compatible remapping.
 
+Canonical lifecycle reference used by current adapters:
+
+| Canonical event      | Cursor source hook                  | Codex source hook  | Claude source hook   |
+| -------------------- | ----------------------------------- | ------------------ | -------------------- |
+| `SessionStart`       | `start` / `sessionStart`            | `SessionStart`     | `SessionStart`       |
+| `UserPromptSubmit`   | `beforeSubmitPrompt`                | `UserPromptSubmit` | `UserPromptSubmit`   |
+| `PreToolUse`         | `preToolUse` / `beforeMCPExecution` | `PreToolUse`       | `PreToolUse`         |
+| `PostToolUse`        | `postToolUse` / `afterMCPExecution` | `PostToolUse`      | `PostToolUse`        |
+| `PostToolUseFailure` | `postToolUseFailure`                | n/a                | `PostToolUseFailure` |
+| `Stop`               | `stop` / `sessionEnd`               | `Stop`             | `Stop`               |
+
+Version-pinned hook selection policy and expanded provider mapping governance are defined in ADR-008.
+
 ## Consequences
 
 - Good, because Codex/Cursor lifecycle events can be queried with one canonical event taxonomy.

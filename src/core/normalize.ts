@@ -1,4 +1,9 @@
-export type AgentEventSource = "cursor" | "claude-code" | "codex" | "generic";
+export type AgentEventSource =
+  | "cursor"
+  | "claude-code"
+  | "codex"
+  | "opencode"
+  | "generic";
 
 export type AgentEventRole =
   | "user_prompt"
