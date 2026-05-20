@@ -1,6 +1,6 @@
 {
   "name": "@agent-profiler/opencode-telemetry-plugin",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "OpenCode plugin that emits telemetry hooks to agent-profiler.",
   "type": "module",
   "main": "src/index.js",
@@ -8,11 +8,28 @@
     "src/**/*",
     "README.md"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cleverb/agent-profiler.git",
+    "directory": "packages/opencode-telemetry-plugin"
+  },
+  "homepage": "https://github.com/cleverb/agent-profiler/tree/main/packages/opencode-telemetry-plugin#readme",
+  "bugs": {
+    "url": "https://github.com/cleverb/agent-profiler/issues"
+  },
   "license": "MIT",
   "keywords": [
     "opencode",
     "plugin",
     "telemetry",
     "agent-profiler"
-  ]
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "registry": "https://registry.npmjs.org/"
+  }
 }

@@ -140,3 +140,8 @@ See `docs/decisions/telemetry/ADR-008-govern-hook-mappings-as-a-versioned-teleme
 ## Releases
 
 Releases are automated with semantic-release. Pull requests run CI plus canary publishing, and pushes to `main` publish to npm and create a GitHub release.
+
+Published packages:
+
+- `agent-profiler` — CLI and dashboard assets (semantic-release on every qualifying push to `main`)
+- `@agent-profiler/opencode-telemetry-plugin` — OpenCode plugin, versioned and published separately when the plugin changes (see `packages/opencode-telemetry-plugin/README.md`)

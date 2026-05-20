@@ -48,6 +48,7 @@
     "smoke:cli": "node scripts/smoke-cli.js",
     "smoke:dashboard": "node scripts/smoke-dashboard.mjs",
     "pack:dry-run": "npm run build && npm pack --dry-run --ignore-scripts",
+    "pack:opencode": "npm pack --workspace=@agent-profiler/opencode-telemetry-plugin --dry-run",
     "prepare": "husky",
     "prepublishOnly": "npm run build && node scripts/prepublish-checks.js",
     "prerelease": "npm run build && node scripts/prepublish-checks.js",
