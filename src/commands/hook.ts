@@ -12,6 +12,10 @@ import {
   type TelemetryHookSource,
 } from "../core/eventMetadata.js";
 import {
+  recordAgentExecutionOnIngest,
+  setEventExecutionInstanceId,
+} from "../core/agentExecutionDb.js";
+import {
   getDefaultDbPath,
   getLatestSessionCarryForwardContext,
   insertEvent,
@@ -156,6 +160,21 @@ export async function runHook(
         normalizationVersion: NORMALIZATION_VERSION,
       },
     );
+
+    /** Links Task/Subagent delegations to execution_instances. @see ADR-009 */
+    const executionInstanceId = recordAgentExecutionOnIngest(
+      db,
+      eventId,
+      carried.source,
+      carried.sourceEvent,
+      rawPayload,
+      derived,
+      carried,
+    );
+    if (executionInstanceId !== null) {
+      setEventExecutionInstanceId(db, eventId, executionInstanceId);
+    }
+
     mergeInteractionSpan(db, eventId, carried, workspaceGit, derived);
   } finally {
     db.close();

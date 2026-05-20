@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
 import { getConfiguredDatabasePath } from "./profile.js";
+import { backfillAgentExecutionCatalog } from "./agentExecutionDb.js";
 import type { DerivedIngestFields } from "./eventMetadata.js";
 import type { NormalizedAgentEvent } from "./normalize.js";
 import type { WorkspaceGitMeta } from "./gitWorkspace.js";
@@ -92,7 +93,22 @@ export function applySchema(db: SqliteDatabase): void {
   db.exec(schemaSql);
   migrateEventsSchema(db);
   migrateInteractionSpansSchema(db);
+  migrateAgentExecutionSchema(db);
   applyDataFidelityFixes(db);
+}
+
+function migrateAgentExecutionSchema(db: SqliteDatabase): void {
+  migrateTableColumns(db, "events", [
+    {
+      name: "execution_instance_id",
+      sql: `ALTER TABLE events ADD COLUMN execution_instance_id INTEGER`,
+    },
+  ]);
+
+  db.exec(
+    `CREATE INDEX IF NOT EXISTS idx_events_execution_instance
+     ON events(execution_instance_id, created_at)`,
+  );
 }
 
 function migrateTableColumns(
@@ -306,6 +322,7 @@ export function insertEvent(
   workspaceGit: WorkspaceGitMeta,
   derived: DerivedIngestFields,
   provenance: IngestProvenance,
+  executionInstanceId: number | null = null,
 ): number {
   // Keep raw payloads verbatim for forensics and stable hashes; path redaction is a
   // separate privacy decision from the derived `~/...` metadata stored alongside them.
@@ -343,9 +360,10 @@ export function insertEvent(
       mcp_server,
       mcp_tool,
       payload_byte_length,
-      prompt_fingerprint
+      prompt_fingerprint,
+      execution_instance_id
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const info = stmt.run(
@@ -381,6 +399,7 @@ export function insertEvent(
     derived.mcpTool,
     derived.payloadByteLength,
     derived.promptFingerprint,
+    executionInstanceId,
   ) as { lastInsertRowid: number | bigint };
 
   return Number(info.lastInsertRowid);
@@ -651,6 +670,12 @@ function applyDataFidelityFixes(db: SqliteDatabase): void {
     `);
 
     recordDataFix(db, opencodeFixName);
+  }
+
+  const agentCatalogFixName = "2026-05-20-agent-execution-catalog-v1";
+  if (!hasDataFix(db, agentCatalogFixName)) {
+    backfillAgentExecutionCatalog(db);
+    recordDataFix(db, agentCatalogFixName);
   }
 }
 

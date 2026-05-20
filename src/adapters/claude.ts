@@ -61,9 +61,13 @@ export function normalizeClaudeEvent(
   rawPayload: unknown,
 ): NormalizedAgentEvent {
   const payload = asRecord(rawPayload);
+  // Prefer the configured hook event name from the CLI invocation (`eventName`),
+  // because payload casing can drift (`stop` vs `Stop`) across runtimes.
+  const sourceEventName =
+    pickFirstString([eventName, payload.hook_event_name]) ?? eventName;
   const mapped = resolveMappedHook(
     "claude-code",
-    pickFirstString([payload.hook_event_name]) ?? eventName,
+    sourceEventName,
     pickFirstString([payload.claude_version, payload.claudeVersion]),
   );
 
