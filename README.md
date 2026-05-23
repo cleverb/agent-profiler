@@ -1,14 +1,15 @@
 # Agent Profiler
 
-## What's New in v1.1.0
+## What's New in v1.3.0
 
-The dashboard and developer workflow got a big refresh:
+Multi-source telemetry and delegation tracking are the focus of this release:
 
-- **Sharper dashboard UI** — usage gauge, efficiency sparkline, session timeline, tool histograms, and context audit in a cohesive dark-friendly layout (light mode too).
-- **Storybook for dashboard components** — develop and document UI modules in isolation with `npm run storybook` (repo contributors).
-- **ADRs in Storybook** — browse and search architecture decision records from the **Architecture** panel while you work on stories.
-- **Light / dark themes** — toggle themes in Storybook and the shipped dashboard via shared `data-theme` tokens.
-- **Stronger telemetry** — canonical cross-source hook event names, Cursor/Codex ID normalization, and safe schema evolution with provenance-backed backfills.
+- **OpenCode support** — install `@agent-profiler/opencode-telemetry-plugin`, register it in `opencode.json`, and ingest OpenCode lifecycle events into the same SQLite store as Cursor, Codex, and Claude.
+- **Versioned hook mappings** — a central registry normalizes source hooks into canonical lifecycle names (`SessionStart`, `PreToolUse`, `PostToolUse`, and so on) so cross-platform analytics stay comparable as vendors evolve.
+- **Agent execution catalog** — profiles, append-only configuration observations, and per-delegation execution instances (for example Cursor `Task` subagents) are persisted and linked from `events` for queryable subagent timelines.
+- **Broader adapter alignment** — Claude, Codex, Cursor, and OpenCode adapters share the same mapping contract; see the [hook mappings](#hook-mappings) table and ADRs [008](docs/decisions/telemetry/ADR-008-govern-hook-mappings-as-a-versioned-telemetry-contract.md) and [009](docs/decisions/telemetry/ADR-009-catalog-agent-execution-profiles-and-instances.md).
+
+The **v1.1.0** dashboard refresh (usage gauge, session timeline, Storybook for contributors, light/dark themes) remains unchanged in this release—see the screenshots below.
 
 ![Agent Profiler Dashboard](assets/dashboard.png)
 
