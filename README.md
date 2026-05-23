@@ -174,8 +174,8 @@ Published automatically with [semantic-release](https://github.com/semantic-rele
 
 Maintainers do not hand-publish the CLI under normal workflow. To ship a new version:
 
-1. Merge the release branch or PR into `main` with commit messages that match [commitlint](https://github.com/cleverb/agent-profiler/blob/main/commitlint.config.js) (`feat:` → minor, `fix:` → patch, breaking footer → major).
-2. Confirm the [Release workflow](https://github.com/cleverb/agent-profiler/actions) succeeds on that push.
+1. Merge the release branch or PR into `main` with commit messages that match [commitlint](https://github.com/cleverb/agent-profiler/blob/main/commitlint.config.js) (`feat:` → minor, `fix:` / `docs:` / `refactor:` → patch, breaking footer → major).
+2. Confirm the [Release workflow](https://github.com/cleverb/agent-profiler/actions) succeeds on that push (uses the `agent-profiler_env` GitHub environment for npm trusted publishing).
 3. Verify on npm: `npm view agent-profiler version`.
 
 Local dry-run before merge (optional):
